@@ -171,7 +171,7 @@ function taskEmailHtml(taskTitle, category, dueDate, storeName){
   `;
 }
 
-function announcementEmailHtml(title, body, category, storeName){
+function announcementEmailHtml(title, body, category, storeName, attachmentUrl, attachmentName, attachmentType, linkUrl, linkLabel){
   const catColors={urgent:'#E05252',general:'#5B8FD4',menu:'#CC9C3A',policy:'#9B78D4'};
   const color=catColors[category]||'#5B8FD4';
   return `
@@ -181,6 +181,8 @@ function announcementEmailHtml(title, body, category, storeName){
       <h1 style="font-size:22px;margin:0 0 4px;color:#F0EDE8;">${title}</h1>
       <p style="color:#8A8480;font-size:13px;margin:0 0 20px;">Hi ${storeName}, HQ has an announcement for you.</p>
       <div style="background:#1E1E1E;border:1px solid #2E2E2E;border-radius:10px;padding:20px;margin-bottom:20px;line-height:1.7;font-size:14px;white-space:pre-wrap;">${body}</div>
+      ${attachmentUrl?`<a href="${attachmentUrl}" style="display:inline-block;background:#CC9C3A;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin-right:10px;">⬇ ${attachmentName||'Download File'}</a>`:''}
+      ${linkUrl?`<a href="${linkUrl}" style="display:inline-block;background:#9B78D4;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;margin-right:10px;">${linkLabel||'View Link'}</a>`:''}
       <a href="https://uglyops.netlify.app/" style="display:inline-block;background:#5B8FD4;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Confirm Receipt in Franchise Ops</a>
       <p style="color:#5A5654;font-size:11px;margin-top:24px;">Please confirm receipt in the Franchise Ops portal. · Ugly Donuts & Corn Dogs Franchising LLC</p>
     </div>
@@ -1508,11 +1510,34 @@ function Announcements(){
   const [loading,setLoading]=useState(true);
   const [showNew,setShowNew]=useState(false);
   const [selected,setSelected]=useState(null);
-  const [form,setForm]=useState({title:'',body:'',category:'general',target:'all'});
+  const [form,setForm]=useState({title:'',body:'',category:'general',target:'',link_url:'',link_label:''});
   const [selectedStores,setSelectedStores]=useState([]);
   const [busy,setBusy]=useState(false);
   const [msg,setMsg]=useState('');
+  const [attachFile,setAttachFile]=useState(null); // File object
+  const [attachPreview,setAttachPreview]=useState(null);
+  const [uploadProgress,setUploadProgress]=useState(0);
   const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+
+  function handleFileChange(e){
+    const file=e.target.files[0];
+    if(!file)return;
+    setAttachFile(file);
+    // Preview for images/video
+    if(file.type.startsWith('image/')||file.type.startsWith('video/')){
+      setAttachPreview(URL.createObjectURL(file));
+    }else{
+      setAttachPreview(null);
+    }
+  }
+
+  function getAttachType(file){
+    if(!file)return null;
+    if(file.type.startsWith('image/'))return'image';
+    if(file.type.startsWith('video/'))return'video';
+    if(file.type==='application/pdf')return'pdf';
+    return'file';
+  }
 
   const ANN_CATS=[
     {key:'general',label:'General',color:'#5B8FD4'},
@@ -1536,8 +1561,26 @@ function Announcements(){
   async function sendAnnouncement(){
     if(!form.title||!form.body){setMsg('Title and body required.');return;}
     setBusy(true);setMsg('');
+    // 0. Upload file if attached
+    let attachment_url=null,attachment_name=null,attachment_type=null;
+    if(attachFile){
+      const ext=attachFile.name.split('.').pop();
+      const path=`${Date.now()}-${attachFile.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+      const{data:upload,error:upErr}=await sb.storage.from('announcements').upload(path,attachFile,{contentType:attachFile.type});
+      if(upErr){setMsg('File upload failed: '+upErr.message);setBusy(false);return;}
+      const{data:urlData}=sb.storage.from('announcements').getPublicUrl(path);
+      attachment_url=urlData.publicUrl;
+      attachment_name=attachFile.name;
+      attachment_type=getAttachType(attachFile);
+    }
     // 1. Create announcement
-    const{data:ann}=await sb.from('ops_announcements').insert([{...form,target:form.target==='all'?'all':selectedStores.join(',')}]).select().single();
+    const{data:ann}=await sb.from('ops_announcements').insert([{
+      ...form,
+      target:form.target==='all'?'all':selectedStores.join(','),
+      attachment_url,attachment_name,attachment_type,
+      link_url:form.link_url||null,
+      link_label:form.link_label||null,
+    }]).select().single();
     if(!ann){setBusy(false);setMsg('Error creating announcement.');return;}
     // 2. Create receipt records
     const targetStores=form.target==='all'?stores:stores.filter(s=>selectedStores.includes(s.id));
@@ -1549,15 +1592,15 @@ function Announcements(){
         const sent=await sendEmail(
           emailTargets,
           `[${form.category.toUpperCase()}] ${form.title}`,
-          announcementEmailHtml(form.title,form.body,form.category,'your store')
+          announcementEmailHtml(form.title,form.body,form.category,'your store',attachment_url,attachment_name,attachment_type,form.link_url,form.link_label)
         );
         setMsg(`✓ Announcement sent to ${emailTargets.length} store${emailTargets.length>1?'s':''}. ${targetStores.length-emailTargets.length>0?`(${targetStores.length-emailTargets.length} stores have no email on file)`:''}`);
       }else{
         setMsg('Announcement created but no stores have email addresses on file.');
       }
     }
-    setForm({title:'',body:'',category:'general',target:'all'});
-    setSelectedStores([]);
+    setForm({title:'',body:'',category:'general',target:'all',link_url:'',link_label:''});
+    setSelectedStores([]);setAttachFile(null);setAttachPreview(null);
     setShowNew(false);
     load();
     setBusy(false);
@@ -1588,6 +1631,37 @@ function Announcements(){
             <div className="form-group">
               <label>Message Body</label>
               <textarea value={form.body} onChange={e=>set('body',e.target.value)} style={{minHeight:120}} placeholder="Write your announcement here..."/>
+            </div>
+
+            {/* Attachment */}
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:11,fontWeight:600,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}}>Attachment (optional)</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div>
+                  <label style={{display:'block',fontSize:12,color:'var(--muted)',marginBottom:6}}>Upload File (PDF, Image, Video)</label>
+                  <label style={{display:'flex',alignItems:'center',gap:8,background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'9px 12px',cursor:'pointer'}}>
+                    <span style={{fontSize:18}}>📎</span>
+                    <span style={{fontSize:13,color:attachFile?'var(--text)':'var(--muted)'}}>{attachFile?attachFile.name:'Choose file...'}</span>
+                    <input type="file" accept="image/*,video/*,.pdf,.doc,.docx" onChange={handleFileChange} style={{display:'none'}}/>
+                  </label>
+                  {attachFile&&(
+                    <div style={{marginTop:6,display:'flex',alignItems:'center',gap:8}}>
+                      {attachPreview&&attachFile.type.startsWith('image/')&&<img src={attachPreview} style={{width:60,height:60,objectFit:'cover',borderRadius:4}}/>}
+                      {attachPreview&&attachFile.type.startsWith('video/')&&<video src={attachPreview} style={{width:80,height:60,objectFit:'cover',borderRadius:4}}/>}
+                      <div>
+                        <div style={{fontSize:12,color:'var(--text)'}}>{attachFile.name}</div>
+                        <div style={{fontSize:11,color:'var(--muted)'}}>{(attachFile.size/1024/1024).toFixed(1)} MB</div>
+                      </div>
+                      <button onClick={()=>{setAttachFile(null);setAttachPreview(null);}} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:16,padding:0,marginLeft:'auto'}}>✕</button>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label style={{display:'block',fontSize:12,color:'var(--muted)',marginBottom:6}}>Or External Link (Google Drive, YouTube, etc.)</label>
+                  <input value={form.link_url} onChange={e=>set('link_url',e.target.value)} placeholder="https://..." style={{width:'100%',background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',marginBottom:6}}/>
+                  <input value={form.link_label} onChange={e=>set('link_label',e.target.value)} placeholder="Button label (e.g. 'View Recipe Book')" style={{width:'100%',background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}/>
+                </div>
+              </div>
             </div>
             <div style={{marginBottom:14}}>
               <div style={{fontSize:11,fontWeight:600,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:8}}>Send To</div>
@@ -1670,6 +1744,35 @@ function AnnouncementCard({ann,stores,catColor,catLabel,onRefresh}){
       <div style={{fontSize:13,color:'var(--muted)',marginBottom:12,lineHeight:1.5,whiteSpace:'pre-wrap'}}>{ann.body.length>150&&!expanded?ann.body.slice(0,150)+'...':ann.body}
         {ann.body.length>150&&<button onClick={()=>setExpanded(s=>!s)} style={{background:'none',border:'none',color:'var(--gold)',cursor:'pointer',fontSize:12,padding:'0 4px',fontFamily:'inherit'}}>{expanded?'Less':'More'}</button>}
       </div>
+
+      {/* Attachments */}
+      {(ann.attachment_url||ann.link_url)&&(
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
+          {ann.attachment_url&&ann.attachment_type==='image'&&(
+            <a href={ann.attachment_url} target="_blank" rel="noreferrer">
+              <img src={ann.attachment_url} alt={ann.attachment_name} style={{maxHeight:120,maxWidth:200,borderRadius:6,objectFit:'cover',border:'1px solid var(--border)',cursor:'pointer'}}/>
+            </a>
+          )}
+          {ann.attachment_url&&ann.attachment_type==='video'&&(
+            <video src={ann.attachment_url} controls style={{maxHeight:160,maxWidth:280,borderRadius:6,border:'1px solid var(--border)'}}/>
+          )}
+          {ann.attachment_url&&ann.attachment_type==='pdf'&&(
+            <a href={ann.attachment_url} target="_blank" rel="noreferrer" style={{display:'flex',alignItems:'center',gap:8,background:'rgba(204,156,58,.1)',border:'1px solid rgba(204,156,58,.3)',borderRadius:8,padding:'8px 14px',textDecoration:'none',color:'var(--gold)',fontSize:13,fontWeight:600}}>
+              📄 {ann.attachment_name||'Download PDF'}
+            </a>
+          )}
+          {ann.attachment_url&&ann.attachment_type==='file'&&(
+            <a href={ann.attachment_url} target="_blank" rel="noreferrer" style={{display:'flex',alignItems:'center',gap:8,background:'rgba(91,143,212,.1)',border:'1px solid rgba(91,143,212,.3)',borderRadius:8,padding:'8px 14px',textDecoration:'none',color:'var(--blue)',fontSize:13,fontWeight:600}}>
+              📎 {ann.attachment_name||'Download File'}
+            </a>
+          )}
+          {ann.link_url&&(
+            <a href={ann.link_url} target="_blank" rel="noreferrer" style={{display:'flex',alignItems:'center',gap:8,background:'rgba(155,120,212,.1)',border:'1px solid rgba(155,120,212,.3)',borderRadius:8,padding:'8px 14px',textDecoration:'none',color:'var(--purple)',fontSize:13,fontWeight:600}}>
+              🔗 {ann.link_label||ann.link_url.slice(0,40)}
+            </a>
+          )}
+        </div>
+      )}
       {total>0&&(
         <>
           <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:4}}>
