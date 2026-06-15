@@ -1367,7 +1367,7 @@ Share securely and ask them to change password on first login.`);
               <label>Link to Store (optional)</label>
               <select value={form.franchisee_id} onChange={e=>set('franchisee_id',e.target.value)} style={{background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',width:'100%'}}>
                 <option value="">— Select store —</option>
-                {stores.map(s=><option key={s.id} value={s.id}>{s.name} · {s.territory}</option>)}
+                {stores.map(s=><option key={s.id} value={s.id}>{s.store_name||s.name} · {s.territory}</option>)}
               </select>
             </div>
             {msg&&(
@@ -1403,7 +1403,12 @@ Share securely and ask them to change password on first login.`);
                     <tr key={m.id}>
                       <td style={{fontWeight:600}}>{m.full_name||m.name||'—'}</td>
                       <td style={{fontSize:12,color:'var(--muted)'}}>{store}</td>
-                      <td><span style={{fontSize:11,background:m.role==='hq'?'rgba(204,156,58,.15)':'rgba(126,200,200,.15)',color:m.role==='hq'?'var(--gold)':'#7EC8C8',padding:'2px 8px',borderRadius:4,fontWeight:700}}>{m.role}</span></td>
+                      <td>
+                        <div style={{display:'flex',flexDirection:'column',gap:3}}>
+                          {m.title&&<span style={{fontSize:11,background:'rgba(95,184,122,.15)',color:'#5FB87A',padding:'2px 8px',borderRadius:4,fontWeight:700}}>{m.title}</span>}
+                          <span style={{fontSize:10,color:'var(--muted)'}}>{m.role==='hq'?'HQ':'Franchisee'}</span>
+                        </div>
+                      </td>
                       <td><span className={`badge ${m.is_active!==false?'badge-green':'badge-red'}`}>{m.is_active!==false?'Active':'Inactive'}</span></td>
                       <td style={{display:'flex',gap:6}}>
                         <button className="btn btn-ghost btn-sm" onClick={()=>setEditMember(m)}>Edit</button>
@@ -1462,7 +1467,7 @@ function EditAccountModal({member,stores,onClose}){
             <label>Linked Store</label>
             <select value={form.store} onChange={e=>set('store',e.target.value)} style={{background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',width:'100%'}}>
               <option value="">— No store linked —</option>
-              {stores.map(s=><option key={s.id} value={s.name}>{s.name} · {s.territory}</option>)}
+              {stores.map(s=><option key={s.id} value={s.store_name||s.name}>{s.store_name||s.name} · {s.territory}</option>)}
             </select>
           </div>
           <div className="form-row">
