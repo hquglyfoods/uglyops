@@ -315,7 +315,7 @@ function MainApp({view,setView,session}){
         {view==='dashboard'&&<Dashboard setView={setView}/>}
         {view==='tasks'&&<TaskList setView={setView}/>}
         {view==='broadcast'&&<BroadcastTask onDone={()=>setView('tasks')}/>}
-        {view==='stores'&&<StoreList/>}
+        {view==='stores'&&<StoreList setView={setView}/>}
         {view==='review'&&<HQReview/>}
         {view==='password'&&<ChangePassword onDone={()=>setView('dashboard')}/>}
         {view==='accounts'&&<AccountManager/>}
@@ -1130,23 +1130,29 @@ function BroadcastTask({onDone}){
 }
 
 // ── STORE LIST ────────────────────────────────────────────
-function StoreList(){
+function StoreList({setView}){
   const [stores,setStores]=useState([]);
   const [tasks,setTasks]=useState([]);
   const [assignments,setAssignments]=useState([]);
   const [loading,setLoading]=useState(true);
   const [selected,setSelected]=useState(null);
   const [search,setSearch]=useState('');
+  const [registeredStores,setRegisteredStores]=useState(new Set());
 
   useEffect(()=>{
     async function load(){
       setLoading(true);
-      const[sRes,tRes,aRes]=await Promise.all([
+      const[sRes,tRes,aRes,pRes]=await Promise.all([
         sb.from('franchisees').select('*').eq('status','open').order('store_name'),
         sb.from('ops_tasks').select('id,title,category').eq('status','active'),
         sb.from('ops_assignments').select('*'),
+        sb.from('profiles').select('store,full_name,name').eq('role','franchisee'),
       ]);
-      setStores(sRes.data||[]);setTasks(tRes.data||[]);setAssignments(aRes.data||[]);setLoading(false);
+      setStores(sRes.data||[]);setTasks(tRes.data||[]);setAssignments(aRes.data||[]);
+      // Build set of store names that have accounts
+      const registeredStores=new Set((pRes.data||[]).map(p=>p.store).filter(Boolean));
+      setRegisteredStores(registeredStores);
+      setLoading(false);
     }
     load();
   },[]);
@@ -1173,34 +1179,86 @@ function StoreList(){
         </div>
         {loading?<div className="loading">Loading...</div>:stores.length===0?(
           <div className="empty"><div className="empty-icon">◍</div><div className="empty-title">No open stores yet</div><div style={{fontSize:13,color:'var(--muted)'}}>Stores appear here when marked Open in Franchise OS</div></div>
-        ):(
-          <div>
-            {filtered.map(s=>{
-              const myAssigns=assignments.filter(a=>a.franchisee_id===s.id);
-              const submitted=myAssigns.filter(a=>a.status==='submitted').length;
-              return(
-                <div key={s.id} style={{background:'var(--panel)',border:'1px solid var(--border)',borderRadius:12,padding:18,marginBottom:12,cursor:'pointer',transition:'border-color .2s'}}
-                  onClick={()=>setSelected(s)}
-                  onMouseEnter={e=>e.currentTarget.style.borderColor='var(--orange)'}
-                  onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
-                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                    <div>
-                      <div style={{fontSize:15,fontWeight:700}}>{s.store_name||s.name}</div>
-                      <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{s.store_name&&<span style={{marginRight:8}}>{s.name} ·</span>}{s.territory}</div>
-                    </div>
-                    <div style={{display:'flex',gap:16,alignItems:'center'}}>
-                      {submitted>0&&<span style={{fontSize:12,color:'var(--gold)',fontWeight:600}}>{submitted} pending review</span>}
-                      <div style={{textAlign:'right'}}>
-                        {s.email&&<a href={`mailto:${s.email}`} onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'var(--blue)',textDecoration:'none',display:'block'}}>✉ {s.email}</a>}
-                        {s.phone&&<a href={`tel:${s.phone}`} onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'var(--green)',textDecoration:'none',marginTop:2,display:'block'}}>📞 {s.phone}</a>}
-                      </div>
+        ):(()=>{
+          const unregistered=filtered.filter(s=>!registeredStores.has(s.store_name||s.name));
+          const registered=filtered.filter(s=>registeredStores.has(s.store_name||s.name));
+          return(
+            <div>
+              {/* Unregistered — needs attention */}
+              {unregistered.length>0&&(
+                <div style={{marginBottom:24}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,padding:'10px 14px',background:'rgba(224,82,82,.08)',border:'1px solid rgba(224,82,82,.25)',borderRadius:10}}>
+                    <span style={{fontSize:16}}>⚠</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:700,color:'var(--red)'}}>{unregistered.length} store{unregistered.length>1?'s':''} without Ops account</div>
+                      <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>These stores cannot log in to Franchise Ops yet</div>
                     </div>
                   </div>
+                  {unregistered.map(s=>{
+                    const myAssigns=assignments.filter(a=>a.franchisee_id===s.id);
+                    const submitted=myAssigns.filter(a=>a.status==='submitted').length;
+                    return(
+                      <div key={s.id} style={{background:'var(--panel)',border:'1px solid rgba(224,82,82,.25)',borderRadius:12,padding:18,marginBottom:10,cursor:'pointer',transition:'border-color .2s',position:'relative'}}
+                        onClick={()=>setSelected(s)}
+                        onMouseEnter={e=>e.currentTarget.style.borderColor='var(--red)'}
+                        onMouseLeave={e=>e.currentTarget.style.borderColor='rgba(224,82,82,.25)'}>
+                        <div style={{position:'absolute',top:12,right:12}}>
+                          <span style={{fontSize:10,fontWeight:700,background:'rgba(224,82,82,.15)',color:'var(--red)',padding:'3px 8px',borderRadius:4}}>NO ACCOUNT</span>
+                        </div>
+                        <div style={{fontSize:15,fontWeight:700,marginBottom:2}}>{s.store_name||s.name}</div>
+                        <div style={{fontSize:12,color:'var(--muted)',marginBottom:8}}>{s.store_name&&<span style={{marginRight:6}}>{s.name} ·</span>}{s.territory}</div>
+                        <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                          {s.email&&<a href={`mailto:${s.email}`} onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'var(--blue)',textDecoration:'none'}}>✉ {s.email}</a>}
+                          {s.phone&&<a href={`tel:${s.phone}`} onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'var(--green)',textDecoration:'none'}}>📞 {s.phone}</a>}
+                          {submitted>0&&<span style={{fontSize:12,color:'var(--gold)',fontWeight:600,marginLeft:'auto'}}>{submitted} pending</span>}
+                        </div>
+                        {s.email&&(
+                          <button className="btn btn-primary btn-sm" style={{marginTop:10}} onClick={e=>{e.stopPropagation();setView&&setView('accounts');}}>
+                            + Create Ops Account →
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
+
+              {/* Registered stores */}
+              {registered.length>0&&(
+                <div>
+                  {unregistered.length>0&&<div style={{fontSize:11,fontWeight:700,color:'var(--muted)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:10}}>Active Accounts ({registered.length})</div>}
+                  {registered.map(s=>{
+                    const myAssigns=assignments.filter(a=>a.franchisee_id===s.id);
+                    const submitted=myAssigns.filter(a=>a.status==='submitted').length;
+                    return(
+                      <div key={s.id} style={{background:'var(--panel)',border:'1px solid var(--border)',borderRadius:12,padding:18,marginBottom:10,cursor:'pointer',transition:'border-color .2s'}}
+                        onClick={()=>setSelected(s)}
+                        onMouseEnter={e=>e.currentTarget.style.borderColor='var(--orange)'}
+                        onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
+                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                          <div>
+                            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
+                              <div style={{fontSize:15,fontWeight:700}}>{s.store_name||s.name}</div>
+                              <span style={{fontSize:10,fontWeight:700,background:'rgba(95,184,122,.15)',color:'var(--green)',padding:'2px 6px',borderRadius:4}}>✓ ACTIVE</span>
+                            </div>
+                            <div style={{fontSize:12,color:'var(--muted)'}}>{s.store_name&&<span style={{marginRight:6}}>{s.name} ·</span>}{s.territory}</div>
+                          </div>
+                          <div style={{display:'flex',gap:16,alignItems:'center'}}>
+                            {submitted>0&&<span style={{fontSize:12,color:'var(--gold)',fontWeight:600}}>{submitted} pending</span>}
+                            <div style={{textAlign:'right'}}>
+                              {s.email&&<a href={`mailto:${s.email}`} onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'var(--blue)',textDecoration:'none',display:'block'}}>✉ {s.email}</a>}
+                              {s.phone&&<a href={`tel:${s.phone}`} onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'var(--green)',textDecoration:'none',marginTop:2,display:'block'}}>📞 {s.phone}</a>}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
       {selected&&<StoreDetailModal store={selected} tasks={tasks} assignments={assignments} onClose={()=>setSelected(null)}/>}
     </>
@@ -1339,28 +1397,28 @@ function AccountManager(){
     });
     if(error){setMsg('Error: '+error.message);setBusy(false);return;}
     if(user?.user){
-      const store=stores.find(s=>s.id===form.franchisee_id);
-      const storeName=store?.store_name||store?.name||'';
+      const storeName=s.store_name||s.name||'';
       await sb.from('profiles').upsert([{
         id:user.user.id,
-        full_name:form.name,
-        name:form.name,
+        full_name:storeName,
+        name:storeName,
         role:'franchisee',
         store:storeName,
         is_active:true,
       }],{onConflict:'id'});
 
       // Send welcome email
-      const emailHtml=`<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0E0E0E;color:#F0EDE8;padding:32px;border-radius:12px;"><div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#CC9C3A;margin-bottom:8px;">Ugly Donuts & Corn Dogs</div><h1 style="font-size:22px;margin:0 0 8px;">Welcome to Franchise Ops</h1><p style="color:#8A8480;font-size:14px;margin:0 0 24px;">Hi ${form.name}, your franchisee account has been created.</p><div style="background:#1E1E1E;border:1px solid #2E2E2E;border-radius:10px;padding:20px;margin-bottom:20px;"><div style="margin-bottom:14px;"><div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Login URL</div><div style="font-size:15px;font-weight:700;color:#F26419;">https://uglyops.netlify.app</div></div><div style="margin-bottom:14px;"><div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Email</div><div style="font-size:15px;font-weight:700;">${form.email}</div></div><div><div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Temporary Password</div><div style="font-size:22px;font-weight:700;font-family:monospace;letter-spacing:.1em;color:#CC9C3A;">${tempPass}</div></div></div>${storeName?`<p style="color:#8A8480;font-size:13px;margin-bottom:16px;">Store: <strong style="color:#F0EDE8;">${storeName}</strong></p>`:''}<div style="background:rgba(204,156,58,.08);border:1px solid rgba(204,156,58,.3);border-radius:8px;padding:12px;margin-bottom:20px;"><p style="color:#CC9C3A;font-size:13px;margin:0;">⚠ Please change your password after first login in the Settings menu.</p></div><a href="https://uglyops.netlify.app" style="display:inline-block;background:#F26419;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Login to Franchise Ops →</a><p style="color:#5A5654;font-size:11px;margin-top:24px;">Ugly Donuts & Corn Dogs Franchising LLC · Belleville, NJ</p></div>`;
+      const emailHtml=`<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0E0E0E;color:#F0EDE8;padding:32px;border-radius:12px;"><div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#CC9C3A;margin-bottom:8px;">Ugly Donuts & Corn Dogs</div><h1 style="font-size:22px;margin:0 0 8px;">Welcome to Franchise Ops</h1><p style="color:#8A8480;font-size:14px;margin:0 0 24px;">Your Franchise Ops account for <strong style="color:#F0EDE8;">${storeName}</strong> has been activated.</p><div style="background:#1E1E1E;border:1px solid #2E2E2E;border-radius:10px;padding:20px;margin-bottom:20px;"><div style="margin-bottom:14px;"><div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Login URL</div><div style="font-size:15px;font-weight:700;color:#F26419;">https://uglyops.netlify.app</div></div><div style="margin-bottom:14px;"><div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Email</div><div style="font-size:15px;font-weight:700;">${email}</div></div><div><div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Temporary Password</div><div style="font-size:22px;font-weight:700;font-family:monospace;letter-spacing:.1em;color:#CC9C3A;">${tempPass}</div></div></div><div style="background:rgba(204,156,58,.08);border:1px solid rgba(204,156,58,.3);border-radius:8px;padding:12px;margin-bottom:20px;"><p style="color:#CC9C3A;font-size:13px;margin:0;">⚠ Please change your password after first login in the Settings menu.</p></div><a href="https://uglyops.netlify.app" style="display:inline-block;background:#F26419;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Login to Franchise Ops →</a><p style="color:#5A5654;font-size:11px;margin-top:24px;">Ugly Donuts & Corn Dogs Franchising LLC · Belleville, NJ</p></div>`;
 
-      const emailSent=await sendEmail(form.email,'Your Ugly Donuts Franchise Ops Account',emailHtml);
-      setMsg(emailSent
-        ?`✓ Account created and welcome email sent to ${form.email}`
-        :`✓ Account created but email failed. Share manually:\nEmail: ${form.email}\nTemp password: ${tempPass}`
-      );
-      setForm({name:'',email:'',franchisee_id:''});
+      const emailSent=await sendEmail(email,'Your Ugly Donuts Franchise Ops Account',emailHtml);
+      setMsgs(m=>({...m,[s.id]:emailSent
+        ?`✓ Account created and login sent to ${email}`
+        :`✓ Account created. Email failed — temp password: ${tempPass}`
+      }));
       load();
     }
+    setBusy(null);
+  }
     setBusy(false);
   }
 
@@ -1381,32 +1439,48 @@ function AccountManager(){
     <>
       <div className="page-header">
         <div><div className="page-title">Accounts</div><div className="page-sub">Franchisee and HQ account management</div></div>
-        <button className="btn btn-primary" onClick={()=>setShowAdd(s=>!s)}>+ Add Account</button>
       </div>
       <div className="content">
-        {showAdd&&(
-          <div className="card" style={{marginBottom:20}}>
-            <div style={{fontWeight:700,marginBottom:14}}>Create Franchisee Account</div>
-            <div className="form-row">
-              <div className="form-group"><label>Full Name</label><input value={form.name} onChange={e=>set('name',e.target.value)} placeholder="e.g. Lawrence Kourie"/></div>
-              <div className="form-group"><label>Email</label><input type="email" value={form.email} onChange={e=>set('email',e.target.value)} placeholder="franchisee@email.com"/></div>
-            </div>
-            <div className="form-group" style={{maxWidth:300}}>
-              <label>Link to Store (optional)</label>
-              <select value={form.franchisee_id} onChange={e=>set('franchisee_id',e.target.value)} style={{background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none',width:'100%'}}>
-                <option value="">— Select store —</option>
-                {stores.map(s=><option key={s.id} value={s.id}>{s.store_name||s.name} · {s.territory}</option>)}
-              </select>
-            </div>
-            {msg&&(
-              <div style={{background:msg.startsWith('✓')?'rgba(95,184,122,.1)':'rgba(224,82,82,.1)',border:`1px solid ${msg.startsWith('✓')?'rgba(95,184,122,.3)':'rgba(224,82,82,.3)'}`,borderRadius:8,padding:12,marginBottom:12,fontSize:13,color:msg.startsWith('✓')?'var(--green)':'var(--red)',whiteSpace:'pre-line'}}>
-                {msg}
+        {/* Pending activation — stores without accounts */}
+        {unregistered.length>0&&(
+          <div style={{marginBottom:24}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,padding:'10px 14px',background:'rgba(224,82,82,.08)',border:'1px solid rgba(224,82,82,.25)',borderRadius:10}}>
+              <span style={{fontSize:16}}>⚠</span>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:'var(--red)'}}>{unregistered.length} store{unregistered.length>1?'s':''} need Ops account activation</div>
+                <div style={{fontSize:11,color:'var(--muted)',marginTop:1}}>Enter email and approve to create login access</div>
               </div>
-            )}
-            <div style={{display:'flex',gap:8}}>
-              <button className="btn btn-primary" onClick={createAccount} disabled={busy||!form.name||!form.email}>{busy?'Creating...':'Create Account'}</button>
-              <button className="btn btn-ghost" onClick={()=>{setShowAdd(false);setMsg('');}}>Cancel</button>
             </div>
+            {unregistered.map(s=>(
+              <div key={s.id} style={{background:'var(--panel)',border:'1px solid rgba(224,82,82,.2)',borderRadius:10,padding:16,marginBottom:10}}>
+                <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+                  <div style={{flex:1,minWidth:160}}>
+                    <div style={{fontSize:14,fontWeight:700}}>{s.store_name||s.name}</div>
+                    <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{s.name} · {s.territory}</div>
+                  </div>
+                  <input
+                    value={emailInputs[s.id]||s.email||''}
+                    onChange={e=>setEmailInputs(ei=>({...ei,[s.id]:e.target.value}))}
+                    placeholder="franchisee@email.com"
+                    type="email"
+                    style={{flex:2,minWidth:200,background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}
+                  />
+                  <button
+                    className="btn btn-primary btn-sm"
+                    disabled={busy===s.id||!(emailInputs[s.id]||s.email)}
+                    onClick={()=>approveStore(s)}
+                    style={{whiteSpace:'nowrap'}}
+                  >
+                    {busy===s.id?'Creating...':'Approve & Send Login →'}
+                  </button>
+                </div>
+                {msgs[s.id]&&(
+                  <div style={{marginTop:8,fontSize:12,color:msgs[s.id].startsWith('✓')?'var(--green)':'var(--red)',padding:'6px 10px',background:msgs[s.id].startsWith('✓')?'rgba(95,184,122,.08)':'rgba(224,82,82,.08)',borderRadius:6}}>
+                    {msgs[s.id]}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
 
