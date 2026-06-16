@@ -2189,7 +2189,7 @@ function Announcements(){
   const [loading,setLoading]=useState(true);
   const [showNew,setShowNew]=useState(false);
   const [selected,setSelected]=useState(null);
-  const [form,setForm]=useState({title:'',body:'',category:'general',target:'',link_url:'',link_label:''});
+  const [form,setForm]=useState({title:'',body:'',category:'general',target:'',link_url:'',link_label:'',due_date:''});
   const [selectedStores,setSelectedStores]=useState([]);
   const [busy,setBusy]=useState(false);
   const [msg,setMsg]=useState('');
@@ -2261,6 +2261,7 @@ function Announcements(){
       attachment_url,attachment_name,attachment_type,
       link_url:form.link_url||null,
       link_label:form.link_label||null,
+      due_date:form.due_date||null,
     }]).select().single();
     if(!ann){setBusy(false);setMsg('Error creating announcement.');return;}
     // 2. Create receipt records
@@ -2308,6 +2309,11 @@ function Announcements(){
                 </select>
               </div>
               <div className="form-group"><label>Title</label><input value={form.title} onChange={e=>set('title',e.target.value)} placeholder="e.g. Summer Menu Launch Notice"/></div>
+            </div>
+            <div className="form-group">
+              <label>Confirmation Deadline (optional)</label>
+              <input type="date" value={form.due_date} onChange={e=>set('due_date',e.target.value)} style={{width:'100%',background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:14,outline:'none'}}/>
+              <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>If set, franchisees who haven't confirmed get an automatic reminder email 1 day before.</div>
             </div>
             <div className="form-group">
               <label>Message Body</label>
@@ -3315,6 +3321,7 @@ function FranchiseeAnnouncements({profile,onUpdate}){
                   <div style={{display:'flex',gap:8,alignItems:'center'}}>
                     <span style={{fontSize:11,fontWeight:700,background:color+'22',color,padding:'2px 8px',borderRadius:999,textTransform:'uppercase'}}>{catLbl(ann.category)}</span>
                     <span style={{fontSize:11,color:'var(--muted)'}}>{fmtDate(ann.created_at)}</span>
+                    {ann.due_date&&<span style={{fontSize:11,fontWeight:700,color:'var(--gold)'}}>Confirm by {fmtDate(ann.due_date)}</span>}
                   </div>
                   {confirmed
                     ?<span style={{fontSize:12,color:'var(--green)',fontWeight:700}}>✓ Received</span>
