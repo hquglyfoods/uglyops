@@ -58,13 +58,19 @@ exports.handler = async (event) => {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: 'Ugly Donuts & Corn Dogs HQ <onboarding@resend.dev>',
+          from: 'Ugly Donuts & Corn Dogs HQ <do-not-reply@uglydonuts-franchiseportal.com>',
           to: [email],
           subject: 'Your Ugly Donuts Franchise Ops Account',
           html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0E0E0E;color:#F0EDE8;padding:32px;border-radius:12px;"><div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#CC9C3A;margin-bottom:8px;">Ugly Donuts & Corn Dogs</div><h1 style="font-size:22px;margin:0 0 8px;">Welcome to Franchise Ops</h1><p style="color:#8A8480;font-size:14px;margin:0 0 24px;">Your Franchise Ops account for <strong style="color:#F0EDE8;">${storeName}</strong> has been activated.</p><div style="background:#1E1E1E;border:1px solid #2E2E2E;border-radius:10px;padding:20px;margin-bottom:20px;"><div style="margin-bottom:14px;"><div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Login URL</div><div style="font-size:15px;font-weight:700;color:#F26419;">https://uglyops.netlify.app</div></div><div style="margin-bottom:14px;"><div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Email</div><div style="font-size:15px;font-weight:700;">${email}</div></div><div><div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Temporary Password</div><div style="font-size:22px;font-weight:700;font-family:monospace;letter-spacing:.1em;color:#CC9C3A;">${tempPass}</div></div></div><div style="background:rgba(204,156,58,.08);border:1px solid rgba(204,156,58,.3);border-radius:8px;padding:12px;margin-bottom:20px;"><p style="color:#CC9C3A;font-size:13px;margin:0;">⚠ Please change your password after first login in the Settings menu.</p></div><a href="https://uglyops.netlify.app" style="display:inline-block;background:#F26419;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Login to Franchise Ops →</a><p style="color:#5A5654;font-size:11px;margin-top:24px;">Ugly Donuts & Corn Dogs Franchising LLC · Belleville, NJ</p></div>`,
         }),
       });
       emailSent = emailRes.ok;
+      if (!emailRes.ok) {
+        const errText = await emailRes.text();
+        return { statusCode: 200, headers, body: JSON.stringify({ success: true, emailSent: false, tempPass, emailError: errText }) };
+      }
+    } else {
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true, emailSent: false, tempPass, emailError: 'RESEND_API_KEY not set in Netlify env vars' }) };
     }
 
     return { statusCode: 200, headers, body: JSON.stringify({ success: true, emailSent, tempPass }) };
