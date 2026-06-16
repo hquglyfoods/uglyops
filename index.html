@@ -351,11 +351,20 @@ function AuthScreen(){
 function MainApp({view,setView,session}){
   const [pendingCount,setPendingCount]=useState(0);
   const [unreadMsgs,setUnreadMsgs]=useState(0);
+  const [pendingAccounts,setPendingAccounts]=useState(0);
   const refreshBadges=useCallback(async()=>{
     const{count}=await sb.from('ops_assignments').select('id',{count:'exact',head:true}).eq('status','submitted');
     setPendingCount(count||0);
     const{count:mc}=await sb.from('ops_messages').select('id',{count:'exact',head:true}).eq('is_read',false);
     setUnreadMsgs(mc||0);
+    // Stores open but without an Ops account yet (need HQ approval)
+    const[pRes,sRes]=await Promise.all([
+      sb.from('profiles').select('store').eq('role','franchisee'),
+      sb.from('franchisees').select('store_name,name').eq('status','open'),
+    ]);
+    const registered=new Set((pRes.data||[]).map(p=>p.store).filter(Boolean));
+    const needApproval=(sRes.data||[]).filter(s=>!registered.has(s.store_name||s.name)).length;
+    setPendingAccounts(needApproval);
   },[]);
   useEffect(()=>{
     refreshBadges();const t=setInterval(refreshBadges,60000);return()=>clearInterval(t);
@@ -369,7 +378,7 @@ function MainApp({view,setView,session}){
     {key:'warnings',  icon:'⚠', label:'Warnings'},
     {key:'stores',    icon:'◍', label:'Stores'},
     {key:'review',    icon:'◎', label:'HQ Review', badge:pendingCount||null},
-    {key:'accounts',  icon:'◯', label:'Accounts'},
+    {key:'accounts',  icon:'◯', label:'Accounts', badge:pendingAccounts||null},
   ];
   return(
     <div className="app">
@@ -404,7 +413,7 @@ function MainApp({view,setView,session}){
         {view==='messages'&&<HQMessages onBadgeRefresh={refreshBadges}/>}
         {view==='warnings'&&<HQWarnings/>}
         {view==='password'&&<ChangePassword onDone={()=>setView('dashboard')}/>}
-        {view==='accounts'&&<AccountManager/>}
+        {view==='accounts'&&<AccountManager onBadgeRefresh={refreshBadges}/>}
         {view==='announce'&&<Announcements/>}
       </main>
     </div>
@@ -2061,7 +2070,7 @@ function HQReview(){
 
 
 // ── ACCOUNT MANAGER ──────────────────────────────────────
-function AccountManager(){
+function AccountManager({onBadgeRefresh}){
   const [accounts,setAccounts]=useState([]);
   const [unregistered,setUnregistered]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -2087,6 +2096,7 @@ function AccountManager(){
     setAccounts(profilesWithEmail);
     setUnregistered(allStores.filter(s=>!registeredNames.has(s.store_name||s.name)));
     setLoading(false);
+    if(onBadgeRefresh)onBadgeRefresh();
   }
   useEffect(()=>{load();},[]);
 
