@@ -637,7 +637,7 @@ function AnnouncementsSummary(){
   const [loading,setLoading]=useState(true);
 
   useEffect(()=>{
-    sb.from('ops_announcements').select('*').eq('status','active').order('created_at',{ascending:false}).limit(10)
+    sb.from('ops_announcements').select('*').neq('status','archived').order('created_at',{ascending:false}).limit(10)
       .then(r=>{setAnnouncements(r.data||[]);setLoading(false);});
   },[]);
 
