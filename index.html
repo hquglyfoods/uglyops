@@ -2129,15 +2129,16 @@ function FranchiseeTasks({profile}){
 
   async function load(){
     setLoading(true);
-    // Find franchisee by store name - try store_name first, then name
-    const storeName=profile?.store||profile?.full_name||profile?.name||'';
+    // Find franchisee by matching profile store name against franchisees table
+    const storeName=(profile?.store||profile?.full_name||profile?.name||'').trim();
     let fr=null;
-    if(storeName){
-      const{data:d1}=await sb.from('franchisees').select('id,name,store_name').eq('status','open').eq('store_name',storeName).maybeSingle();
-      if(d1)fr=d1;
-      if(!fr){const{data:d2}=await sb.from('franchisees').select('id,name,store_name').eq('status','open').eq('name',storeName).maybeSingle();if(d2)fr=d2;}
-      if(!fr){const{data:d3}=await sb.from('franchisees').select('id,name,store_name').eq('status','open').ilike('store_name',`%${storeName}%`).maybeSingle();if(d3)fr=d3;}
-      if(!fr){const{data:d4}=await sb.from('franchisees').select('id,name,store_name').eq('status','open').ilike('name',`%${storeName}%`).maybeSingle();if(d4)fr=d4;}
+    const{data:allFr}=await sb.from('franchisees').select('id,name,store_name').eq('status','open');
+    if(allFr&&storeName){
+      // exact match first
+      fr=allFr.find(f=>(f.store_name||'').toLowerCase()===storeName.toLowerCase())
+        ||allFr.find(f=>(f.name||'').toLowerCase()===storeName.toLowerCase())
+        ||allFr.find(f=>(f.store_name||'').toLowerCase().includes(storeName.toLowerCase()))
+        ||allFr.find(f=>(f.name||'').toLowerCase().includes(storeName.toLowerCase()));
     }
     if(!fr){setLoading(false);return;}
 
@@ -2385,13 +2386,14 @@ function FranchiseeAnnouncements({profile}){
   useEffect(()=>{
     async function load(){
       setLoading(true);
-      const storeName=profile?.store||profile?.full_name||profile?.name||'';
+      const storeName=(profile?.store||profile?.full_name||profile?.name||'').trim();
       let fr=null;
-      if(storeName){
-        const{data:d1}=await sb.from('franchisees').select('id').eq('status','open').eq('store_name',storeName).maybeSingle();
-        if(d1)fr=d1;
-        if(!fr){const{data:d2}=await sb.from('franchisees').select('id').eq('status','open').eq('name',storeName).maybeSingle();if(d2)fr=d2;}
-        if(!fr){const{data:d3}=await sb.from('franchisees').select('id').eq('status','open').ilike('store_name',`%${storeName}%`).maybeSingle();if(d3)fr=d3;}
+      const{data:allFr2}=await sb.from('franchisees').select('id,name,store_name').eq('status','open');
+      if(allFr2&&storeName){
+        fr=allFr2.find(f=>(f.store_name||'').toLowerCase()===storeName.toLowerCase())
+          ||allFr2.find(f=>(f.name||'').toLowerCase()===storeName.toLowerCase())
+          ||allFr2.find(f=>(f.store_name||'').toLowerCase().includes(storeName.toLowerCase()))
+          ||allFr2.find(f=>(f.name||'').toLowerCase().includes(storeName.toLowerCase()));
       }
       const frId=fr?.id;
       setFranchiseeId(frId);
@@ -2408,14 +2410,25 @@ function FranchiseeAnnouncements({profile}){
   },[]);
 
   async function confirm(annId){
-    if(!franchiseeId)return;
+    if(!franchiseeId){
+      alert('Unable to confirm receipt — store not linked. Please contact HQ.');
+      return;
+    }
     const existing=receipts.find(r=>r.announcement_id===annId);
     if(existing?.confirmed)return;
+    let error=null;
     if(existing){
-      await sb.from('ops_announcement_receipts').update({confirmed:true,confirmed_at:new Date().toISOString()}).eq('id',existing.id);
+      const res=await sb.from('ops_announcement_receipts').update({confirmed:true,confirmed_at:new Date().toISOString()}).eq('id',existing.id);
+      error=res.error;
     }else{
-      await sb.from('ops_announcement_receipts').insert([{announcement_id:annId,franchisee_id:franchiseeId,confirmed:true,confirmed_at:new Date().toISOString()}]);
+      const res=await sb.from('ops_announcement_receipts').insert([{announcement_id:annId,franchisee_id:franchiseeId,confirmed:true,confirmed_at:new Date().toISOString()}]);
+      error=res.error;
     }
+    if(error){
+      alert('Failed to confirm receipt. Please try again or contact HQ.');
+      return;
+    }
+    // Only update UI after successful DB save
     const{data}=await sb.from('ops_announcement_receipts').select('*').eq('franchisee_id',franchiseeId);
     setReceipts(data||[]);
   }
