@@ -11,9 +11,10 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap');
 :root{
-  --gold:#CC9C3A;--gold-dim:#7A5C1E;--black:#0E0E0E;--panel:#1E1E1E;--panel2:#252525;
-  --border:#2E2E2E;--border2:#383838;--text:#F0EDE8;--muted:#8A8480;--muted2:#5A5654;
-  --red:#E05252;--green:#5FB87A;--blue:#5B8FD4;--orange:#F26419;--purple:#9B78D4;
+  --gold:#CC9C3A;--gold-dim:#7A5C1E;--black:#0A1413;--panel:#13201F;--panel2:#1A2A28;
+  --border:#243634;--border2:#2F423F;--text:#F0EDE8;--muted:#869490;--muted2:#566460;
+  --red:#E05252;--green:#5FB87A;--blue:#5B8FD4;--orange:#14B8A6;--purple:#9B78D4;
+  --teal:#14B8A6;--teal-bright:#2DD4BF;
   --cat-operations:#5B8FD4;--cat-marketing:#D98AA0;--cat-qa:#E05252;
   --cat-training:#CC9C3A;--cat-seasonal:#9B78D4;
 }
@@ -23,27 +24,27 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--text);mi
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;}
 .auth-card{width:380px;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:40px;}
 .auth-logo{font-family:'Playfair Display',serif;font-size:22px;color:var(--gold);margin-bottom:2px;}
-.auth-app{font-size:12px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:28px;}
+.auth-app{font-size:12px;color:var(--teal-bright);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:28px;}
 .auth-card label{display:block;color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
 .auth-card input{width:100%;background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;margin-bottom:14px;transition:border-color .2s;}
-.auth-card input:focus{border-color:var(--gold);}
-.btn-gold{width:100%;background:var(--gold);color:var(--black);border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;}
+.auth-card input:focus{border-color:var(--teal);}
+.btn-gold{width:100%;background:var(--teal);color:#04201C;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;}
 .btn-gold:hover{opacity:.88;}
 .auth-err{color:var(--red);font-size:12px;margin-top:10px;text-align:center;}
 /* LAYOUT */
 .app{display:flex;min-height:100vh;}
-.sidebar{width:220px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;}
+.sidebar{width:220px;background:linear-gradient(180deg,#0C1A19 0%,#0A1514 100%);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;}
 .sidebar-logo{padding:16px 20px 14px;border-bottom:1px solid var(--border);}
 .sidebar-logo img.brand-logo{width:36px;height:36px;object-fit:contain;border-radius:6px;}
 .sidebar-logo img.brand-wordmark{width:120px;height:auto;object-fit:contain;margin-top:6px;display:block;}
 .sidebar-logo .brand{font-family:'Playfair Display',serif;font-size:15px;color:var(--gold);}
-.sidebar-logo .app-tag{font-size:10px;color:var(--orange);letter-spacing:.12em;text-transform:uppercase;margin-top:3px;font-weight:700;}
+.sidebar-logo .app-tag{font-size:10px;color:var(--teal-bright);letter-spacing:.12em;text-transform:uppercase;margin-top:3px;font-weight:700;}
 .sidebar-logo .switch-link{font-size:11px;color:var(--muted);margin-top:8px;cursor:pointer;text-decoration:none;display:block;}
 .sidebar-logo .switch-link:hover{color:var(--text);}
 .nav{padding:12px 8px;flex:1;}
 .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;transition:all .15s;margin-bottom:2px;background:none;border:none;width:100%;text-align:left;font-family:inherit;}
 .nav-item:hover{background:var(--panel2);color:var(--text);}
-.nav-item.active{background:rgba(242,100,25,.1);color:var(--orange);}
+.nav-item.active{background:rgba(20,184,166,.12);color:var(--teal-bright);}
 .nav-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:999px;font-size:10px;font-weight:700;padding:1px 6px;}
 .sidebar-footer{padding:14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);}
 .sidebar-footer button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;font-family:inherit;}
@@ -55,7 +56,7 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--text);mi
 .content{padding:24px 32px;}
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:all .15s;}
-.btn-primary{background:var(--orange);color:#fff;}
+.btn-primary{background:var(--teal);color:#04201C;font-weight:700;}
 .btn-primary:hover{opacity:.88;}
 .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2);}
 .btn-ghost:hover{background:var(--panel2);color:var(--text);}
@@ -144,6 +145,43 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--text);mi
 .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700;}
 .badge-green{background:rgba(95,184,122,.15);color:var(--green);}
 .badge-red{background:rgba(224,82,82,.15);color:var(--red);}
+
+/* ===== MOBILE RESPONSIVE ===== */
+@media (max-width:768px){
+  .app{flex-direction:column;}
+  .sidebar{width:100%;height:auto;position:static;flex-direction:column;border-right:none;border-bottom:1px solid var(--border);}
+  .sidebar-logo{padding:14px 16px 10px;}
+  /* nav becomes horizontal scroll */
+  .sidebar .nav{display:flex;flex-direction:row!important;overflow-x:auto;gap:4px;padding:8px 12px;-webkit-overflow-scrolling:touch;}
+  .nav-item{white-space:nowrap;flex-shrink:0;width:auto!important;padding:8px 12px;font-size:12px;}
+  .sidebar .sidebar-footer, .sidebar-bottom{flex-direction:row;overflow-x:auto;}
+  .main{width:100%;}
+  .page-header{padding:16px 16px 12px;flex-wrap:wrap;gap:10px;position:static;}
+  .page-title{font-size:20px!important;}
+  .content{padding:16px;}
+  .card-grid-4{grid-template-columns:repeat(2,1fr);gap:10px;}
+  .card-grid-2{grid-template-columns:1fr;gap:12px;}
+  .form-row{grid-template-columns:1fr;}
+  .card{padding:16px!important;}
+  .modal-overlay{padding:0;align-items:flex-end;}
+  .modal{max-width:100%!important;width:100%!important;max-height:92vh;border-radius:16px 16px 0 0;}
+  .modal-header{padding:16px;}
+  .modal-body{padding:16px!important;}
+  .modal-footer{padding:12px 16px;flex-wrap:wrap;}
+  .modal-footer .btn{flex:1;min-width:0;}
+  .tab-bar{padding:0 16px;overflow-x:auto;}
+  .filter-bar{gap:8px;}
+  /* tables scroll horizontally */
+  .table-wrap{overflow-x:auto;}
+  .table-wrap table{min-width:520px;}
+  /* stat cards / grids that use inline repeat(4) */
+  [style*="repeat(4,1fr)"]{grid-template-columns:repeat(2,1fr)!important;}
+  [style*="repeat(3,1fr)"]{grid-template-columns:1fr!important;}
+}
+@media (max-width:420px){
+  .card-grid-4{grid-template-columns:1fr;}
+  [style*="repeat(4,1fr)"]{grid-template-columns:1fr!important;}
+}
 </style>
 </head>
 <body>
@@ -285,10 +323,13 @@ function AuthScreen(){
 
 function MainApp({view,setView,session}){
   const [pendingCount,setPendingCount]=useState(0);
+  const [unreadMsgs,setUnreadMsgs]=useState(0);
   useEffect(()=>{
     async function count(){
       const{count}=await sb.from('ops_assignments').select('id',{count:'exact',head:true}).eq('status','submitted');
       setPendingCount(count||0);
+      const{count:mc}=await sb.from('ops_messages').select('id',{count:'exact',head:true}).eq('is_read',false);
+      setUnreadMsgs(mc||0);
     }
     count();const t=setInterval(count,60000);return()=>clearInterval(t);
   },[]);
@@ -297,6 +338,8 @@ function MainApp({view,setView,session}){
     {key:'tasks',     icon:'▤', label:'Tasks & Announcements'},
     {key:'broadcast', icon:'⊕', label:'New Task'},
     {key:'announce',  icon:'◈', label:'New Announcement'},
+    {key:'messages',  icon:'✉', label:'Messages', badge:unreadMsgs||null},
+    {key:'warnings',  icon:'⚠', label:'Warnings'},
     {key:'stores',    icon:'◍', label:'Stores'},
     {key:'review',    icon:'◎', label:'HQ Review', badge:pendingCount||null},
     {key:'accounts',  icon:'◯', label:'Accounts'},
@@ -307,7 +350,7 @@ function MainApp({view,setView,session}){
         <div className="sidebar-logo">
           <div className="brand">Ugly Donuts</div>
           <div className="app-tag">Franchise Ops</div>
-          <a href="https://uglycrm.netlify.app/" className="switch-link">← Back to Franchise OS</a>
+          <a href="https://uglycrm.netlify.app/" className="switch-link" style={{color:"#F26419",opacity:.75}}>← Back to Franchise OS</a>
         </div>
         <nav className="nav">
           {navItems.map(n=>(
@@ -331,6 +374,8 @@ function MainApp({view,setView,session}){
         {view==='broadcast'&&<BroadcastTask onDone={()=>setView('tasks')}/>}
         {view==='stores'&&<StoreList setView={setView}/>}
         {view==='review'&&<HQReview/>}
+        {view==='messages'&&<HQMessages/>}
+        {view==='warnings'&&<HQWarnings/>}
         {view==='password'&&<ChangePassword onDone={()=>setView('dashboard')}/>}
         {view==='accounts'&&<AccountManager/>}
         {view==='announce'&&<Announcements/>}
@@ -1392,6 +1437,395 @@ function StoreDetailModal({store,tasks,assignments,onClose}){
 }
 
 // ── HQ REVIEW ─────────────────────────────────────────────
+// ── HQ WARNINGS (official warnings, 3-strike rule) ────────
+const WARN_CATEGORIES=['Missed Deadline','Quality','Compliance','Conduct','Other'];
+
+function HQWarnings(){
+  const [stores,setStores]=useState([]);
+  const [warnings,setWarnings]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [showIssue,setShowIssue]=useState(false);
+  const [detail,setDetail]=useState(null);
+
+  async function load(){
+    setLoading(true);
+    const[sRes,wRes]=await Promise.all([
+      sb.from('franchisees').select('id,name,store_name,territory,email').eq('status','open').order('store_name'),
+      sb.from('ops_warnings').select('*').order('issued_at',{ascending:false}),
+    ]);
+    setStores(sRes.data||[]);
+    setWarnings(wRes.data||[]);
+    setLoading(false);
+  }
+  useEffect(()=>{load();},[]);
+
+  // Count active warnings within last 365 days per store
+  const oneYearAgo=new Date(Date.now()-365*24*60*60*1000);
+  function activeCount(frId){
+    return warnings.filter(w=>w.franchisee_id===frId&&w.status==='active'&&new Date(w.issued_at)>=oneYearAgo).length;
+  }
+
+  // Stores sorted by warning count (most at-risk first)
+  const storesWithCounts=stores.map(s=>({...s,count:activeCount(s.id)})).sort((a,b)=>b.count-a.count);
+  const atRisk=storesWithCounts.filter(s=>s.count>=3);
+
+  return(
+    <>
+      <div className="page-header">
+        <div><div className="page-title">Warnings</div><div className="page-sub">Official warning records · 3 active in 12 months = termination review</div></div>
+        <button className="btn btn-primary" onClick={()=>setShowIssue(true)}>+ Issue Warning</button>
+      </div>
+      <div className="content">
+        {/* At-risk alert */}
+        {atRisk.length>0&&(
+          <div style={{background:'rgba(224,82,82,.1)',border:'1px solid rgba(224,82,82,.35)',borderRadius:12,padding:16,marginBottom:20}}>
+            <div style={{fontSize:13,fontWeight:700,color:'var(--red)',marginBottom:8}}>⚠ {atRisk.length} store{atRisk.length>1?'s':''} at termination review threshold (3+ active warnings)</div>
+            {atRisk.map(s=>(
+              <div key={s.id} style={{fontSize:13,color:'var(--text)',marginTop:4}}>• <strong>{s.store_name||s.name}</strong> — {s.count} active warnings</div>
+            ))}
+          </div>
+        )}
+
+        {/* Store summary grid */}
+        <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:12}}>Store Standing</div>
+        {loading?<div className="loading">Loading...</div>:(
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:12,marginBottom:28}}>
+            {storesWithCounts.map(s=>{
+              const c=s.count;
+              const color=c>=3?'var(--red)':c===2?'var(--gold)':c===1?'var(--blue)':'var(--green)';
+              return(
+                <div key={s.id} style={{background:'var(--panel)',border:`1px solid ${c>=3?'rgba(224,82,82,.35)':'var(--border)'}`,borderRadius:10,padding:14}}>
+                  <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>{s.store_name||s.name}</div>
+                  <div style={{fontSize:11,color:'var(--muted)',marginBottom:10}}>{s.territory}</div>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <div style={{display:'flex',gap:4}}>
+                      {[0,1,2].map(i=>(
+                        <div key={i} style={{width:22,height:8,borderRadius:4,background:i<c?color:'var(--border2)'}}/>
+                      ))}
+                    </div>
+                    <span style={{fontSize:12,fontWeight:700,color}}>{c}/3</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* All warnings log */}
+        <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:12}}>Warning Log</div>
+        {warnings.length===0?(
+          <div style={{color:'var(--muted)',fontSize:13,padding:'10px 0'}}>No warnings issued yet.</div>
+        ):warnings.map(w=>{
+          const expired=new Date(w.issued_at)<oneYearAgo;
+          return(
+            <div key={w.id} onClick={()=>setDetail(w)} style={{background:'var(--panel)',border:'1px solid var(--border)',borderLeft:`3px solid ${w.status==='rescinded'?'var(--muted2)':expired?'var(--border2)':'var(--red)'}`,borderRadius:10,padding:14,marginBottom:10,cursor:'pointer',opacity:w.status==='rescinded'||expired?0.65:1}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4,flexWrap:'wrap',gap:6}}>
+                <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                  <span style={{fontSize:11,fontWeight:700,background:'rgba(224,82,82,.15)',color:'var(--red)',padding:'2px 8px',borderRadius:999}}>{w.category}</span>
+                  <span style={{fontSize:14,fontWeight:700}}>{w.store_name}</span>
+                  {w.status==='rescinded'&&<span style={{fontSize:10,color:'var(--muted)',fontWeight:700,textTransform:'uppercase'}}>Rescinded</span>}
+                  {expired&&w.status==='active'&&<span style={{fontSize:10,color:'var(--muted)',fontWeight:700,textTransform:'uppercase'}}>Expired (&gt;12mo)</span>}
+                </div>
+                <span style={{fontSize:11,color:'var(--muted)'}}>{new Date(w.issued_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
+              </div>
+              <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.5}}>{w.reason.length>120?w.reason.slice(0,120)+'...':w.reason}</div>
+              {w.related_task_title&&<div style={{fontSize:11,color:'var(--muted2)',marginTop:4}}>Related task: {w.related_task_title}</div>}
+            </div>
+          );
+        })}
+      </div>
+      {showIssue&&<IssueWarningModal stores={stores} onClose={()=>{setShowIssue(false);load();}}/>}
+      {detail&&<WarningDetailModal warning={detail} onClose={()=>{setDetail(null);load();}}/>}
+    </>
+  );
+}
+
+function IssueWarningModal({stores,onClose}){
+  const [frId,setFrId]=useState('');
+  const [category,setCategory]=useState('');
+  const [reason,setReason]=useState('');
+  const [severity,setSeverity]=useState('standard');
+  const [busy,setBusy]=useState(false);
+  const [msg,setMsg]=useState('');
+
+  async function issue(){
+    if(!frId){setMsg('Please select a store.');return;}
+    if(!category){setMsg('Please select a category.');return;}
+    if(!reason.trim()){setMsg('Reason is required (official record).');return;}
+    setBusy(true);setMsg('');
+    const store=stores.find(s=>s.id===frId);
+    const storeName=store?.store_name||store?.name||'';
+    const{error}=await sb.from('ops_warnings').insert([{
+      franchisee_id:frId,store_name:storeName,category,reason:reason.trim(),
+      severity,status:'active',issued_by:'HQ',
+    }]);
+    if(error){setMsg('Error: '+error.message);setBusy(false);return;}
+    // Official email notification to franchisee
+    if(store?.email){
+      try{
+        await fetch(EMAIL_FN,{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            to:store.email,
+            subject:`OFFICIAL WARNING — Ugly Donuts & Corn Dogs Franchise`,
+            html:`<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0E0E0E;color:#F0EDE8;padding:32px;border-radius:12px;"><div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#E05252;margin-bottom:8px;font-weight:700;">Official Warning Notice</div><h1 style="font-size:20px;margin:0 0 6px;">Franchise Compliance Warning</h1><p style="color:#8A8480;font-size:13px;margin:0 0 20px;">Issued to <strong style="color:#F0EDE8;">${storeName}</strong> on ${new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</p><div style="background:#1E1E1E;border:1px solid #E05252;border-radius:10px;padding:18px;margin-bottom:18px;"><div style="font-size:11px;color:#E05252;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;font-weight:700;">Category: ${category}</div><div style="font-size:14px;line-height:1.6;white-space:pre-wrap;">${reason.trim().replace(/</g,'&lt;')}</div></div><div style="background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.25);border-radius:8px;padding:14px;margin-bottom:20px;"><p style="color:#E05252;font-size:13px;margin:0;line-height:1.5;"><strong>Important:</strong> Per the Franchise Agreement, three (3) active warnings within a twelve (12) month period may result in termination review. Please address this matter promptly.</p></div><a href="https://uglyops.netlify.app" style="display:inline-block;background:#14B8A6;color:#04201C;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">View in Franchise Ops →</a><p style="color:#5A5654;font-size:11px;margin-top:24px;">Ugly Donuts & Corn Dogs Franchising LLC · This is an official notice.</p></div>`,
+          }),
+        });
+      }catch(e){/* best-effort */}
+    }
+    setMsg('✓ Warning issued'+(store?.email?' and emailed to franchisee.':' (no email on file).'));
+    setTimeout(()=>onClose(),900);
+    setBusy(false);
+  }
+
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title" style={{color:'var(--red)'}}>⚠ Issue Official Warning</div>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div style={{background:'rgba(224,82,82,.08)',border:'1px solid rgba(224,82,82,.2)',borderRadius:8,padding:12,marginBottom:16,fontSize:12,color:'var(--muted)',lineHeight:1.5}}>
+            This creates a permanent official record and sends a formal notice to the franchisee. Use carefully.
+          </div>
+          <div className="form-group">
+            <label>Store</label>
+            <select value={frId} onChange={e=>setFrId(e.target.value)} style={{width:'100%',background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:14,outline:'none'}}>
+              <option value="">— Select store —</option>
+              {stores.map(s=><option key={s.id} value={s.id}>{s.store_name||s.name} · {s.territory}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Category</label>
+            <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:4}}>
+              {WARN_CATEGORIES.map(cat=>(
+                <button key={cat} onClick={()=>setCategory(cat)} className="btn btn-sm"
+                  style={{background:category===cat?'var(--red)':'var(--panel2)',color:category===cat?'#fff':'var(--text)',border:`1px solid ${category===cat?'var(--red)':'var(--border2)'}`,fontWeight:category===cat?700:500}}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Reason (official record)</label>
+            <textarea value={reason} onChange={e=>setReason(e.target.value)} rows={5} placeholder="Describe the violation in detail. This becomes a permanent record." style={{resize:'vertical'}}/>
+          </div>
+          {msg&&<div style={{fontSize:13,color:msg.startsWith('✓')?'var(--green)':'var(--red)',marginBottom:8}}>{msg}</div>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-danger" onClick={issue} disabled={busy||!frId||!category||!reason.trim()}>{busy?'Issuing...':'Issue Warning'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WarningDetailModal({warning,onClose}){
+  const [busy,setBusy]=useState(false);
+  const [msg,setMsg]=useState('');
+  const [rescindMode,setRescindMode]=useState(false);
+  const [rescindReason,setRescindReason]=useState('');
+
+  async function rescind(){
+    if(!rescindReason.trim()){setMsg('Please provide a reason for rescinding.');return;}
+    setBusy(true);
+    const{error}=await sb.from('ops_warnings').update({
+      status:'rescinded',rescinded_reason:rescindReason.trim(),rescinded_at:new Date().toISOString(),
+    }).eq('id',warning.id);
+    if(error){setMsg('Error: '+error.message);setBusy(false);return;}
+    setMsg('✓ Warning rescinded.');
+    setTimeout(()=>onClose(),700);
+    setBusy(false);
+  }
+
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div>
+            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:4}}>
+              <span style={{fontSize:11,fontWeight:700,background:'rgba(224,82,82,.15)',color:'var(--red)',padding:'2px 8px',borderRadius:999}}>{warning.category}</span>
+              {warning.status==='rescinded'&&<span style={{fontSize:10,color:'var(--muted)',fontWeight:700,textTransform:'uppercase'}}>Rescinded</span>}
+            </div>
+            <div className="modal-title" style={{margin:0}}>{warning.store_name}</div>
+          </div>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div style={{fontSize:11,color:'var(--muted)',marginBottom:6,textTransform:'uppercase',letterSpacing:'.06em',fontWeight:700}}>Reason</div>
+          <div style={{background:'var(--panel2)',borderRadius:10,padding:16,fontSize:14,lineHeight:1.6,whiteSpace:'pre-wrap',marginBottom:16}}>{warning.reason}</div>
+          {warning.related_task_title&&<div style={{fontSize:12,color:'var(--muted)',marginBottom:12}}>Related task: <strong style={{color:'var(--text)'}}>{warning.related_task_title}</strong></div>}
+          <div style={{fontSize:11,color:'var(--muted2)',marginBottom:4}}>Issued by {warning.issued_by||'HQ'} on {new Date(warning.issued_at).toLocaleString('en-US',{month:'long',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+          {warning.status==='rescinded'&&(
+            <div style={{background:'rgba(134,148,144,.1)',borderRadius:8,padding:12,marginTop:12}}>
+              <div style={{fontSize:10,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',marginBottom:4}}>Rescinded {warning.rescinded_at?`· ${new Date(warning.rescinded_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`:''}</div>
+              <div style={{fontSize:13,color:'var(--text)',lineHeight:1.5}}>{warning.rescinded_reason}</div>
+            </div>
+          )}
+          {warning.status==='active'&&rescindMode&&(
+            <div style={{marginTop:16}}>
+              <div className="form-group">
+                <label>Rescind Reason</label>
+                <textarea value={rescindReason} onChange={e=>setRescindReason(e.target.value)} rows={3} placeholder="Why is this warning being rescinded? (kept on record)" style={{resize:'vertical'}}/>
+              </div>
+            </div>
+          )}
+          {msg&&<div style={{fontSize:13,color:msg.startsWith('✓')?'var(--green)':'var(--red)',marginTop:8}}>{msg}</div>}
+        </div>
+        <div className="modal-footer">
+          {warning.status==='active'&&!rescindMode&&<button className="btn btn-ghost btn-sm" style={{marginRight:'auto',color:'var(--muted)'}} onClick={()=>setRescindMode(true)}>Rescind Warning</button>}
+          {rescindMode?(
+            <>
+              <button className="btn btn-ghost" onClick={()=>setRescindMode(false)}>Cancel</button>
+              <button className="btn btn-danger" onClick={rescind} disabled={busy||!rescindReason.trim()}>{busy?'...':'Confirm Rescind'}</button>
+            </>
+          ):(
+            <button className="btn btn-ghost" onClick={onClose}>Close</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── HQ MESSAGES (inbox from franchisees) ──────────────────
+function HQMessages(){
+  const [messages,setMessages]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [filter,setFilter]=useState('all'); // all, open, replied
+  const [topicFilter,setTopicFilter]=useState('all');
+  const [selected,setSelected]=useState(null);
+
+  async function load(){
+    setLoading(true);
+    const{data}=await sb.from('ops_messages').select('*').order('created_at',{ascending:false});
+    setMessages(data||[]);
+    setLoading(false);
+  }
+  useEffect(()=>{load();},[]);
+
+  async function openMessage(m){
+    if(!m.is_read){
+      await sb.from('ops_messages').update({is_read:true}).eq('id',m.id);
+    }
+    setSelected(m);
+    load();
+  }
+
+  const filtered=messages.filter(m=>{
+    if(filter==='open'&&m.status!=='open')return false;
+    if(filter==='replied'&&m.status!=='replied')return false;
+    if(topicFilter!=='all'&&m.topic!==topicFilter)return false;
+    return true;
+  });
+  const openCount=messages.filter(m=>m.status==='open').length;
+
+  return(
+    <>
+      <div className="page-header"><div><div className="page-title">Messages</div><div className="page-sub">{openCount} awaiting reply · {messages.length} total</div></div></div>
+      <div className="content">
+        <div style={{display:'flex',gap:8,marginBottom:14,flexWrap:'wrap'}}>
+          {['all','open','replied'].map(f=>(
+            <button key={f} className={`btn btn-sm ${filter===f?'btn-primary':'btn-ghost'}`} onClick={()=>setFilter(f)}>
+              {f==='all'?'All':f==='open'?'Awaiting Reply':'Replied'}
+            </button>
+          ))}
+          <select value={topicFilter} onChange={e=>setTopicFilter(e.target.value)} style={{marginLeft:'auto',background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'7px 12px',color:'var(--text)',fontSize:13,fontFamily:'inherit',outline:'none'}}>
+            <option value="all">All Topics</option>
+            {MSG_TOPICS.map(t=><option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        {loading?<div className="loading">Loading...</div>:filtered.length===0?(
+          <div className="empty"><div className="empty-icon">✉</div><div className="empty-title">No messages</div></div>
+        ):filtered.map(m=>(
+          <div key={m.id} onClick={()=>openMessage(m)} style={{background:'var(--panel)',border:`1px solid ${!m.is_read?'var(--teal)':'var(--border)'}`,borderLeft:`3px solid ${TOPIC_COLORS[m.topic]||'#869490'}`,borderRadius:10,padding:16,marginBottom:10,cursor:'pointer',transition:'border-color .15s'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+              <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                {!m.is_read&&<span style={{width:8,height:8,borderRadius:'50%',background:'var(--teal)',flexShrink:0}}/>}
+                <span style={{fontSize:11,fontWeight:700,background:(TOPIC_COLORS[m.topic]||'#869490')+'22',color:TOPIC_COLORS[m.topic]||'#869490',padding:'2px 8px',borderRadius:999}}>{m.topic}</span>
+                <span style={{fontSize:14,fontWeight:700}}>{m.subject}</span>
+              </div>
+              <span style={{fontSize:11,color:m.status==='replied'?'var(--green)':'var(--gold)'}}>{m.status==='replied'?'✓ Replied':'Open'}</span>
+            </div>
+            <div style={{fontSize:12,color:'var(--text)',fontWeight:600,marginBottom:2}}>{m.store_name}</div>
+            <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.5,whiteSpace:'pre-wrap'}}>{m.body.length>140?m.body.slice(0,140)+'...':m.body}</div>
+            <div style={{fontSize:10,color:'var(--muted2)',marginTop:8}}>{new Date(m.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+          </div>
+        ))}
+      </div>
+      {selected&&<HQMessageDetail message={selected} onClose={()=>{setSelected(null);load();}}/>}
+    </>
+  );
+}
+
+function HQMessageDetail({message,onClose}){
+  const [reply,setReply]=useState(message.hq_reply||'');
+  const [busy,setBusy]=useState(false);
+  const [msg,setMsg]=useState('');
+
+  async function sendReply(){
+    if(!reply.trim()){setMsg('Reply cannot be empty.');return;}
+    setBusy(true);setMsg('');
+    const{error}=await sb.from('ops_messages').update({
+      hq_reply:reply.trim(),status:'replied',replied_at:new Date().toISOString(),replied_by:'HQ',
+    }).eq('id',message.id);
+    if(error){setMsg('Error: '+error.message);setBusy(false);return;}
+    // Notify franchisee via email if we have their email
+    try{
+      let frEmail=null;
+      if(message.franchisee_id){
+        const{data:fr}=await sb.from('franchisees').select('email').eq('id',message.franchisee_id).maybeSingle();
+        frEmail=fr?.email;
+      }
+      if(frEmail){
+        await fetch(EMAIL_FN,{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            to:frEmail,
+            subject:`HQ replied to your message: ${message.subject}`,
+            html:`<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0E0E0E;color:#F0EDE8;padding:28px;border-radius:12px;"><div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#14B8A6;margin-bottom:8px;">Franchise Ops · HQ Reply</div><h2 style="margin:0 0 12px;font-size:18px;">Re: ${message.subject}</h2><div style="background:#1A2A28;border:1px solid #243634;border-radius:10px;padding:16px;font-size:14px;line-height:1.6;white-space:pre-wrap;margin-bottom:16px;">${reply.trim().replace(/</g,'&lt;')}</div><a href="https://uglyops.netlify.app" style="display:inline-block;background:#14B8A6;color:#04201C;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">View in Franchise Ops →</a></div>`,
+          }),
+        });
+      }
+    }catch(e){/* best-effort */}
+    setMsg('✓ Reply sent.');
+    setTimeout(()=>onClose(),700);
+    setBusy(false);
+  }
+
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal modal-lg">
+        <div className="modal-header">
+          <div>
+            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:4}}>
+              <span style={{fontSize:11,fontWeight:700,background:(TOPIC_COLORS[message.topic]||'#869490')+'22',color:TOPIC_COLORS[message.topic]||'#869490',padding:'2px 8px',borderRadius:999}}>{message.topic}</span>
+              <div className="modal-title" style={{margin:0}}>{message.subject}</div>
+            </div>
+            <div style={{fontSize:12,color:'var(--muted)'}}>{message.store_name} · {message.sender_name}</div>
+          </div>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div style={{background:'var(--panel2)',borderRadius:10,padding:16,marginBottom:18,fontSize:14,lineHeight:1.6,whiteSpace:'pre-wrap'}}>{message.body}</div>
+          <div style={{fontSize:11,color:'var(--muted2)',marginBottom:18}}>Received {new Date(message.created_at).toLocaleString('en-US',{month:'long',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+          <div className="form-group">
+            <label>HQ Reply</label>
+            <textarea value={reply} onChange={e=>setReply(e.target.value)} rows={6} placeholder="Type your reply to the franchisee..." style={{resize:'vertical'}}/>
+          </div>
+          {msg&&<div style={{fontSize:13,color:msg.startsWith('✓')?'var(--green)':'var(--red)',marginBottom:8}}>{msg}</div>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Close</button>
+          <button className="btn btn-primary" onClick={sendReply} disabled={busy||!reply.trim()}>{busy?'Sending...':message.status==='replied'?'Update Reply':'Send Reply →'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HQReview(){
   const [submitted,setSubmitted]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -2108,6 +2542,8 @@ function FranchiseePortal({session, profile}){
   const navItems=[
     {key:'tasks',    icon:'▤', label:'My Tasks'},
     {key:'announce', icon:'◈', label:'Announcements'},
+    {key:'contact',  icon:'✉', label:'Contact HQ'},
+    {key:'warnings', icon:'⚠', label:'My Standing'},
     {key:'bot',      icon:'◉', label:'UglyBot'},
     {key:'password', icon:'◎', label:'Settings'},
   ];
@@ -2138,10 +2574,208 @@ function FranchiseePortal({session, profile}){
         </div>
         {portalView==='tasks'&&<FranchiseeTasks profile={profile}/>}
         {portalView==='announce'&&<FranchiseeAnnouncements profile={profile}/>}
+        {portalView==='contact'&&<ContactHQ profile={profile} storeName={storeName}/>}
+        {portalView==='warnings'&&<FranchiseeWarnings profile={profile} storeName={storeName}/>}
         {portalView==='bot'&&<UglyBotPortal storeName={storeName}/>}
         {portalView==='password'&&<ChangePassword onDone={()=>setPortalView('tasks')}/>}
       </main>
     </div>
+  );
+}
+
+// ── CONTACT HQ (franchisee → HQ messages) ─────────────────
+const MSG_TOPICS=['Operation','Marketing','Supply','Finance','HR','Management','Other'];
+const TOPIC_COLORS={Operation:'#14B8A6',Marketing:'#9B78D4',Supply:'#CC9C3A',Finance:'#5FB87A',HR:'#5B8FD4',Management:'#E0857A',Other:'#869490'};
+
+function ContactHQ({profile,storeName}){
+  const [topic,setTopic]=useState('');
+  const [subject,setSubject]=useState('');
+  const [body,setBody]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [msg,setMsg]=useState('');
+  const [history,setHistory]=useState([]);
+  const [loading,setLoading]=useState(true);
+
+  async function loadHistory(){
+    setLoading(true);
+    let frId=profile?.franchisee_id;
+    if(!frId){
+      const sn=(profile?.store||profile?.full_name||'').trim();
+      const{data:allFr}=await sb.from('franchisees').select('id,store_name,name').eq('status','open');
+      const fr=(allFr||[]).find(f=>(f.store_name||'').toLowerCase()===sn.toLowerCase()||(f.name||'').toLowerCase()===sn.toLowerCase());
+      frId=fr?.id;
+    }
+    if(frId){
+      const{data}=await sb.from('ops_messages').select('*').eq('franchisee_id',frId).order('created_at',{ascending:false});
+      setHistory(data||[]);
+    }
+    setLoading(false);
+  }
+  useEffect(()=>{loadHistory();},[]);
+
+  async function send(){
+    if(!topic){setMsg('Please choose a topic.');return;}
+    if(!subject.trim()||!body.trim()){setMsg('Subject and message are required.');return;}
+    setBusy(true);setMsg('');
+    // Resolve franchisee_id
+    let frId=profile?.franchisee_id;
+    if(!frId){
+      const sn=(profile?.store||profile?.full_name||'').trim();
+      const{data:allFr}=await sb.from('franchisees').select('id,store_name,name').eq('status','open');
+      const fr=(allFr||[]).find(f=>(f.store_name||'').toLowerCase()===sn.toLowerCase()||(f.name||'').toLowerCase()===sn.toLowerCase());
+      frId=fr?.id;
+    }
+    const{error}=await sb.from('ops_messages').insert([{
+      franchisee_id:frId||null,
+      store_name:storeName,
+      sender_name:profile?.full_name||profile?.name||storeName,
+      topic,subject:subject.trim(),body:body.trim(),status:'open',is_read:false,
+    }]);
+    if(error){setMsg('Error: '+error.message);setBusy(false);return;}
+    // Notify HQ via email (best-effort)
+    try{
+      await fetch(EMAIL_FN,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          to:'hq@uglydonutsncorndogs.com',
+          subject:`[${topic}] New message from ${storeName}: ${subject.trim()}`,
+          html:`<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0E0E0E;color:#F0EDE8;padding:28px;border-radius:12px;"><div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#14B8A6;margin-bottom:8px;">Franchise Ops · New Message</div><h2 style="margin:0 0 4px;font-size:18px;">${subject.trim()}</h2><div style="font-size:13px;color:#8A8480;margin-bottom:16px;">From <strong style="color:#F0EDE8;">${storeName}</strong> · Topic: <strong style="color:#14B8A6;">${topic}</strong></div><div style="background:#1A2A28;border:1px solid #243634;border-radius:10px;padding:16px;font-size:14px;line-height:1.6;white-space:pre-wrap;">${body.trim().replace(/</g,'&lt;')}</div><a href="https://uglyops.netlify.app" style="display:inline-block;margin-top:20px;background:#14B8A6;color:#04201C;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Reply in Franchise Ops →</a></div>`,
+        }),
+      });
+    }catch(e){/* email best-effort */}
+    setMsg('✓ Message sent to HQ. They will respond soon.');
+    setTopic('');setSubject('');setBody('');
+    loadHistory();
+    setBusy(false);
+  }
+
+  return(
+    <>
+      <div className="page-header"><div><div className="page-title">Contact HQ</div><div className="page-sub">Send a message to headquarters</div></div></div>
+      <div className="content">
+        <div className="card" style={{maxWidth:640,marginBottom:24}}>
+          <div style={{fontWeight:700,marginBottom:14}}>New Message</div>
+          <div className="form-group">
+            <label>Topic</label>
+            <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:4}}>
+              {MSG_TOPICS.map(t=>(
+                <button key={t} onClick={()=>setTopic(t)} className="btn btn-sm"
+                  style={{background:topic===t?TOPIC_COLORS[t]:'var(--panel2)',color:topic===t?'#04201C':'var(--text)',border:`1px solid ${topic===t?TOPIC_COLORS[t]:'var(--border2)'}`,fontWeight:topic===t?700:500}}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="form-group"><label>Subject</label><input value={subject} onChange={e=>setSubject(e.target.value)} placeholder="Brief subject line"/></div>
+          <div className="form-group"><label>Message</label><textarea value={body} onChange={e=>setBody(e.target.value)} rows={5} placeholder="Describe your question or issue..." style={{resize:'vertical'}}/></div>
+          {msg&&<div style={{padding:12,background:msg.startsWith('✓')?'rgba(95,184,122,.1)':'rgba(224,82,82,.1)',border:`1px solid ${msg.startsWith('✓')?'rgba(95,184,122,.3)':'rgba(224,82,82,.3)'}`,borderRadius:8,fontSize:13,color:msg.startsWith('✓')?'var(--green)':'var(--red)',marginBottom:12}}>{msg}</div>}
+          <button className="btn btn-primary" onClick={send} disabled={busy||!topic||!subject.trim()||!body.trim()}>{busy?'Sending...':'Send to HQ →'}</button>
+        </div>
+
+        <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:12}}>Message History</div>
+        {loading?<div className="loading">Loading...</div>:history.length===0?(
+          <div style={{color:'var(--muted)',fontSize:13,padding:'20px 0'}}>No messages yet.</div>
+        ):history.map(m=>(
+          <div key={m.id} style={{background:'var(--panel)',border:'1px solid var(--border)',borderLeft:`3px solid ${TOPIC_COLORS[m.topic]||'#869490'}`,borderRadius:10,padding:16,marginBottom:10}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <span style={{fontSize:11,fontWeight:700,background:(TOPIC_COLORS[m.topic]||'#869490')+'22',color:TOPIC_COLORS[m.topic]||'#869490',padding:'2px 8px',borderRadius:999}}>{m.topic}</span>
+                <span style={{fontSize:14,fontWeight:700}}>{m.subject}</span>
+              </div>
+              <span style={{fontSize:11,color:m.status==='replied'?'var(--green)':'var(--muted)'}}>{m.status==='replied'?'✓ Replied':'Awaiting reply'}</span>
+            </div>
+            <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.5,whiteSpace:'pre-wrap',marginBottom:m.hq_reply?10:0}}>{m.body}</div>
+            {m.hq_reply&&(
+              <div style={{background:'var(--panel2)',borderRadius:8,padding:12,marginTop:8,borderLeft:'2px solid var(--teal)'}}>
+                <div style={{fontSize:10,fontWeight:700,color:'var(--teal-bright)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:4}}>HQ Reply {m.replied_by?`· ${m.replied_by}`:''}</div>
+                <div style={{fontSize:13,lineHeight:1.5,whiteSpace:'pre-wrap'}}>{m.hq_reply}</div>
+              </div>
+            )}
+            <div style={{fontSize:10,color:'var(--muted2)',marginTop:8}}>{new Date(m.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+// ── FRANCHISEE WARNINGS (own standing) ────────────────────
+function FranchiseeWarnings({profile,storeName}){
+  const [warnings,setWarnings]=useState([]);
+  const [loading,setLoading]=useState(true);
+
+  async function load(){
+    setLoading(true);
+    let frId=profile?.franchisee_id;
+    if(!frId){
+      const sn=(profile?.store||profile?.full_name||'').trim();
+      const{data:allFr}=await sb.from('franchisees').select('id,store_name,name').eq('status','open');
+      const fr=(allFr||[]).find(f=>(f.store_name||'').toLowerCase()===sn.toLowerCase()||(f.name||'').toLowerCase()===sn.toLowerCase());
+      frId=fr?.id;
+    }
+    if(frId){
+      const{data}=await sb.from('ops_warnings').select('*').eq('franchisee_id',frId).order('issued_at',{ascending:false});
+      setWarnings(data||[]);
+    }
+    setLoading(false);
+  }
+  useEffect(()=>{load();},[]);
+
+  const oneYearAgo=new Date(Date.now()-365*24*60*60*1000);
+  const activeCount=warnings.filter(w=>w.status==='active'&&new Date(w.issued_at)>=oneYearAgo).length;
+  const color=activeCount>=3?'var(--red)':activeCount===2?'var(--gold)':activeCount===1?'var(--blue)':'var(--green)';
+
+  return(
+    <>
+      <div className="page-header"><div><div className="page-title">My Standing</div><div className="page-sub">Compliance status and warning history</div></div></div>
+      <div className="content">
+        {/* Standing card */}
+        <div className="card" style={{maxWidth:520,marginBottom:24,border:`1px solid ${activeCount>=3?'rgba(224,82,82,.4)':activeCount===2?'rgba(204,156,58,.4)':'var(--border)'}`}}>
+          <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:12}}>Active Warnings (last 12 months)</div>
+          <div style={{display:'flex',alignItems:'center',gap:14,marginBottom:12}}>
+            <div style={{display:'flex',gap:6}}>
+              {[0,1,2].map(i=>(
+                <div key={i} style={{width:40,height:14,borderRadius:5,background:i<activeCount?color:'var(--border2)'}}/>
+              ))}
+            </div>
+            <span style={{fontSize:20,fontWeight:700,color}}>{activeCount}/3</span>
+          </div>
+          {activeCount>=3?(
+            <div style={{fontSize:13,color:'var(--red)',lineHeight:1.5}}>Your store has reached the warning threshold defined in the Franchise Agreement. Please contact HQ immediately.</div>
+          ):activeCount===2?(
+            <div style={{fontSize:13,color:'var(--gold)',lineHeight:1.5}}>One more warning within 12 months may trigger a termination review. Please address any outstanding issues.</div>
+          ):activeCount===1?(
+            <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.5}}>You have one active warning. Maintain compliance to keep your standing in good order.</div>
+          ):(
+            <div style={{fontSize:13,color:'var(--green)',lineHeight:1.5}}>Your store is in good standing. No active warnings.</div>
+          )}
+        </div>
+
+        {/* History */}
+        <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:12}}>Warning History</div>
+        {loading?<div className="loading">Loading...</div>:warnings.length===0?(
+          <div style={{color:'var(--muted)',fontSize:13,padding:'10px 0'}}>No warnings on record. Keep up the great work!</div>
+        ):warnings.map(w=>{
+          const expired=new Date(w.issued_at)<oneYearAgo;
+          return(
+            <div key={w.id} style={{background:'var(--panel)',border:'1px solid var(--border)',borderLeft:`3px solid ${w.status==='rescinded'?'var(--muted2)':expired?'var(--border2)':'var(--red)'}`,borderRadius:10,padding:16,marginBottom:10,opacity:w.status==='rescinded'||expired?0.65:1}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6,flexWrap:'wrap',gap:6}}>
+                <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                  <span style={{fontSize:11,fontWeight:700,background:'rgba(224,82,82,.15)',color:'var(--red)',padding:'2px 8px',borderRadius:999}}>{w.category}</span>
+                  {w.status==='rescinded'&&<span style={{fontSize:10,color:'var(--green)',fontWeight:700,textTransform:'uppercase'}}>✓ Rescinded</span>}
+                  {expired&&w.status==='active'&&<span style={{fontSize:10,color:'var(--muted)',fontWeight:700,textTransform:'uppercase'}}>Expired</span>}
+                </div>
+                <span style={{fontSize:11,color:'var(--muted)'}}>{new Date(w.issued_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
+              </div>
+              <div style={{fontSize:13,color:'var(--text)',lineHeight:1.6,whiteSpace:'pre-wrap'}}>{w.reason}</div>
+              {w.status==='rescinded'&&w.rescinded_reason&&(
+                <div style={{fontSize:12,color:'var(--green)',marginTop:8,fontStyle:'italic'}}>Rescinded: {w.rescinded_reason}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
