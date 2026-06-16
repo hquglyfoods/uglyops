@@ -39,7 +39,7 @@ exports.handler = async (event) => {
 
     const userId = userData.id;
 
-    // Insert profile via service key
+    // Insert profile via service key (include franchisee_id if provided)
     await fetch(`${SUPA_URL}/rest/v1/profiles`, {
       method: 'POST',
       headers: {
@@ -48,7 +48,7 @@ exports.handler = async (event) => {
         'Authorization': `Bearer ${SUPA_SERVICE_KEY}`,
         'Prefer': 'resolution=merge-duplicates',
       },
-      body: JSON.stringify({ id: userId, full_name: storeName, name: storeName, role: 'franchisee', store: storeName, is_active: true }),
+      body: JSON.stringify({ id: userId, full_name: storeName, name: storeName, role: 'franchisee', store: storeName, is_active: true, franchisee_id: franchiseeId || null }),
     });
 
     // Send welcome email via Resend
