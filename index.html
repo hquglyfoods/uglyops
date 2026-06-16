@@ -624,9 +624,9 @@ function TaskList({setView}){
         ):(
           filtered.map(t=><TaskCard key={t.id} task={t} onClick={()=>setSelected(t)} onRefresh={load}/>)
         )}
+        <AnnouncementsSummary/>
       </div>
       {selected&&<TaskDetailModal task={selected} onClose={()=>{setSelected(null);load();}}/>}
-      <AnnouncementsSummary/>
     </>
   );
 }
