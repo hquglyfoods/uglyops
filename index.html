@@ -1795,6 +1795,16 @@ function HQMessageDetail({message,onClose}){
     if(!message.is_read){sb.from('ops_messages').update({is_read:true}).eq('id',message.id);}
   },[]);
 
+  async function deleteConversation(){
+    if(!window.confirm('Delete this entire conversation? This permanently removes the message and all replies for both HQ and the franchisee. This cannot be undone.'))return;
+    setBusy(true);
+    // Delete replies first (cascade should handle it, but be explicit)
+    await sb.from('ops_message_replies').delete().eq('message_id',message.id);
+    const{error}=await sb.from('ops_messages').delete().eq('id',message.id);
+    if(error){setMsg('Error deleting: '+error.message);setBusy(false);return;}
+    onClose();
+  }
+
   async function sendReply(){
     if(!reply.trim()){setMsg('Reply cannot be empty.');return;}
     setBusy(true);setMsg('');
@@ -1868,6 +1878,7 @@ function HQMessageDetail({message,onClose}){
           {msg&&<div style={{fontSize:13,color:msg.startsWith('✓')?'var(--green)':'var(--red)',marginTop:8}}>{msg}</div>}
         </div>
         <div className="modal-footer">
+          <button className="btn btn-danger btn-sm" style={{marginRight:'auto'}} onClick={deleteConversation} disabled={busy}>Delete Conversation</button>
           <button className="btn btn-ghost" onClick={onClose}>Close</button>
           <button className="btn btn-primary" onClick={sendReply} disabled={busy||!reply.trim()}>{busy?'Sending...':'Send Reply →'}</button>
         </div>
