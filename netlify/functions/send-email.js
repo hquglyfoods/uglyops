@@ -1,5 +1,5 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = 'onboarding@resend.dev';
+const FROM_EMAIL = 'do-not-reply@uglydonuts-franchiseportal.com';
 const FROM_NAME = 'Ugly Donuts & Corn Dogs HQ';
 
 exports.handler = async (event) => {
