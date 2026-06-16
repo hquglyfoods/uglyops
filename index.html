@@ -2129,24 +2129,30 @@ function FranchiseeTasks({profile}){
 
   async function load(){
     setLoading(true);
-    // Find franchisee record by store name or email
-    const{data:fr}=await sb.from('franchisees').select('id,name,store_name').eq('status','open')
-      .or(`name.ilike.%${profile?.full_name||''}%,store_name.ilike.%${profile?.store||''}%`)
-      .limit(1).single();
-
+    // Find franchisee by store name - try store_name first, then name
+    const storeName=profile?.store||profile?.full_name||profile?.name||'';
+    let fr=null;
+    if(storeName){
+      const{data:d1}=await sb.from('franchisees').select('id,name,store_name').eq('status','open').eq('store_name',storeName).maybeSingle();
+      if(d1)fr=d1;
+      if(!fr){const{data:d2}=await sb.from('franchisees').select('id,name,store_name').eq('status','open').eq('name',storeName).maybeSingle();if(d2)fr=d2;}
+      if(!fr){const{data:d3}=await sb.from('franchisees').select('id,name,store_name').eq('status','open').ilike('store_name',`%${storeName}%`).maybeSingle();if(d3)fr=d3;}
+      if(!fr){const{data:d4}=await sb.from('franchisees').select('id,name,store_name').eq('status','open').ilike('name',`%${storeName}%`).maybeSingle();if(d4)fr=d4;}
+    }
     if(!fr){setLoading(false);return;}
 
     const{data:assigns}=await sb.from('ops_assignments')
-      .select('*,ops_tasks(title,description,category,due_date,require_hq_approval)')
+      .select('*,ops_tasks(title,description,category,due_date,require_hq_approval,status)')
       .eq('franchisee_id',fr.id)
-      .neq('ops_tasks.status','archived')
       .order('created_at',{ascending:false});
+    // Filter out archived tasks client-side
+    const filteredAssigns=(assigns||[]).filter(a=>a.ops_tasks?.status!=='archived');
 
-    setAssignments(assigns||[]);
+    setAssignments(filteredAssigns||[]);
 
     // Load subtasks and completions for each assignment
     const stMap={},cMap={};
-    await Promise.all((assigns||[]).map(async a=>{
+    await Promise.all((filteredAssigns||[]).map(async a=>{
       const[stRes,cRes]=await Promise.all([
         sb.from('ops_subtasks').select('*').eq('ops_task_id',a.ops_task_id).order('sort_order'),
         sb.from('ops_completions').select('*').eq('ops_assignment_id',a.id),
@@ -2379,9 +2385,14 @@ function FranchiseeAnnouncements({profile}){
   useEffect(()=>{
     async function load(){
       setLoading(true);
-      const{data:fr}=await sb.from('franchisees').select('id').eq('status','open')
-        .or(`name.ilike.%${profile?.full_name||''}%,store_name.ilike.%${profile?.store||''}%`)
-        .limit(1).single();
+      const storeName=profile?.store||profile?.full_name||profile?.name||'';
+      let fr=null;
+      if(storeName){
+        const{data:d1}=await sb.from('franchisees').select('id').eq('status','open').eq('store_name',storeName).maybeSingle();
+        if(d1)fr=d1;
+        if(!fr){const{data:d2}=await sb.from('franchisees').select('id').eq('status','open').eq('name',storeName).maybeSingle();if(d2)fr=d2;}
+        if(!fr){const{data:d3}=await sb.from('franchisees').select('id').eq('status','open').ilike('store_name',`%${storeName}%`).maybeSingle();if(d3)fr=d3;}
+      }
       const frId=fr?.id;
       setFranchiseeId(frId);
 
