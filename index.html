@@ -187,7 +187,7 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--text);mi
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useMemo } = React;
+const { useState, useEffect, useMemo, useCallback } = React;
 
 const SUPA_URL = "https://ciufbbdzekqlqdzodnrr.supabase.co";
 const SUPA_KEY = "sb_publishable_26hdkwY53clveH7bDPf21w_JGtrY1NP";
@@ -324,15 +324,15 @@ function AuthScreen(){
 function MainApp({view,setView,session}){
   const [pendingCount,setPendingCount]=useState(0);
   const [unreadMsgs,setUnreadMsgs]=useState(0);
-  useEffect(()=>{
-    async function count(){
-      const{count}=await sb.from('ops_assignments').select('id',{count:'exact',head:true}).eq('status','submitted');
-      setPendingCount(count||0);
-      const{count:mc}=await sb.from('ops_messages').select('id',{count:'exact',head:true}).eq('is_read',false);
-      setUnreadMsgs(mc||0);
-    }
-    count();const t=setInterval(count,60000);return()=>clearInterval(t);
+  const refreshBadges=useCallback(async()=>{
+    const{count}=await sb.from('ops_assignments').select('id',{count:'exact',head:true}).eq('status','submitted');
+    setPendingCount(count||0);
+    const{count:mc}=await sb.from('ops_messages').select('id',{count:'exact',head:true}).eq('is_read',false);
+    setUnreadMsgs(mc||0);
   },[]);
+  useEffect(()=>{
+    refreshBadges();const t=setInterval(refreshBadges,60000);return()=>clearInterval(t);
+  },[refreshBadges]);
   const navItems=[
     {key:'dashboard', icon:'◈', label:'Dashboard'},
     {key:'tasks',     icon:'▤', label:'Tasks & Announcements'},
@@ -374,7 +374,7 @@ function MainApp({view,setView,session}){
         {view==='broadcast'&&<BroadcastTask onDone={()=>setView('tasks')}/>}
         {view==='stores'&&<StoreList setView={setView}/>}
         {view==='review'&&<HQReview/>}
-        {view==='messages'&&<HQMessages/>}
+        {view==='messages'&&<HQMessages onBadgeRefresh={refreshBadges}/>}
         {view==='warnings'&&<HQWarnings/>}
         {view==='password'&&<ChangePassword onDone={()=>setView('dashboard')}/>}
         {view==='accounts'&&<AccountManager/>}
@@ -1691,7 +1691,7 @@ function WarningDetailModal({warning,onClose}){
 }
 
 // ── HQ MESSAGES (inbox from franchisees) ──────────────────
-function HQMessages(){
+function HQMessages({onBadgeRefresh}){
   const [messages,setMessages]=useState([]);
   const [loading,setLoading]=useState(true);
   const [filter,setFilter]=useState('all'); // all, open, replied
@@ -1703,6 +1703,7 @@ function HQMessages(){
     const{data}=await sb.from('ops_messages').select('*').order('created_at',{ascending:false});
     setMessages(data||[]);
     setLoading(false);
+    if(onBadgeRefresh)onBadgeRefresh();
   }
   useEffect(()=>{load();},[]);
 
@@ -1760,19 +1761,52 @@ function HQMessages(){
   );
 }
 
+// Build a unified thread array from a message + its replies
+function buildThread(message,replies){
+  const thread=[];
+  // First bubble: original franchisee message
+  thread.push({role:'franchisee',name:message.sender_name||message.store_name,body:message.body,at:message.created_at});
+  // Legacy single HQ reply (if exists and pre-dates the replies table)
+  if(message.hq_reply&&message.hq_reply.trim()){
+    thread.push({role:'hq',name:message.replied_by||'HQ',body:message.hq_reply,at:message.replied_at||message.created_at,legacy:true});
+  }
+  // Threaded replies
+  (replies||[]).forEach(r=>thread.push({role:r.sender_role,name:r.sender_name,body:r.body,at:r.created_at}));
+  // Sort by time
+  thread.sort((a,b)=>new Date(a.at)-new Date(b.at));
+  return thread;
+}
+
 function HQMessageDetail({message,onClose}){
-  const [reply,setReply]=useState(message.hq_reply||'');
+  const [reply,setReply]=useState('');
+  const [replies,setReplies]=useState([]);
   const [busy,setBusy]=useState(false);
   const [msg,setMsg]=useState('');
+  const [loading,setLoading]=useState(true);
+
+  async function loadReplies(){
+    const{data}=await sb.from('ops_message_replies').select('*').eq('message_id',message.id).order('created_at',{ascending:true});
+    setReplies(data||[]);
+    setLoading(false);
+  }
+  useEffect(()=>{
+    loadReplies();
+    // Opening the thread marks it read
+    if(!message.is_read){sb.from('ops_messages').update({is_read:true}).eq('id',message.id);}
+  },[]);
 
   async function sendReply(){
     if(!reply.trim()){setMsg('Reply cannot be empty.');return;}
     setBusy(true);setMsg('');
-    const{error}=await sb.from('ops_messages').update({
-      hq_reply:reply.trim(),status:'replied',replied_at:new Date().toISOString(),replied_by:'HQ',
-    }).eq('id',message.id);
+    const{error}=await sb.from('ops_message_replies').insert([{
+      message_id:message.id,sender_role:'hq',sender_name:'HQ',body:reply.trim(),
+    }]);
     if(error){setMsg('Error: '+error.message);setBusy(false);return;}
-    // Notify franchisee via email if we have their email
+    // Mark message as replied + read; last sender = hq
+    await sb.from('ops_messages').update({
+      status:'replied',is_read:true,last_sender_role:'hq',replied_at:new Date().toISOString(),replied_by:'HQ',
+    }).eq('id',message.id);
+    // Notify franchisee via email
     try{
       let frEmail=null;
       if(message.franchisee_id){
@@ -1790,10 +1824,13 @@ function HQMessageDetail({message,onClose}){
         });
       }
     }catch(e){/* best-effort */}
+    setReply('');
+    await loadReplies();
     setMsg('✓ Reply sent.');
-    setTimeout(()=>onClose(),700);
     setBusy(false);
   }
+
+  const thread=buildThread(message,replies);
 
   return(
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
@@ -1809,17 +1846,30 @@ function HQMessageDetail({message,onClose}){
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         <div className="modal-body">
-          <div style={{background:'var(--panel2)',borderRadius:10,padding:16,marginBottom:18,fontSize:14,lineHeight:1.6,whiteSpace:'pre-wrap'}}>{message.body}</div>
-          <div style={{fontSize:11,color:'var(--muted2)',marginBottom:18}}>Received {new Date(message.created_at).toLocaleString('en-US',{month:'long',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}</div>
-          <div className="form-group">
-            <label>HQ Reply</label>
-            <textarea value={reply} onChange={e=>setReply(e.target.value)} rows={6} placeholder="Type your reply to the franchisee..." style={{resize:'vertical'}}/>
+          {loading?<div className="loading">Loading...</div>:(
+            <div style={{display:'flex',flexDirection:'column',gap:12,marginBottom:18}}>
+              {thread.map((t,i)=>{
+                const isHQ=t.role==='hq';
+                return(
+                  <div key={i} style={{display:'flex',flexDirection:'column',alignItems:isHQ?'flex-end':'flex-start'}}>
+                    <div style={{maxWidth:'80%',background:isHQ?'var(--teal)':'var(--panel2)',color:isHQ?'#04201C':'var(--text)',borderRadius:isHQ?'12px 12px 2px 12px':'12px 12px 12px 2px',padding:'12px 14px',fontSize:14,lineHeight:1.55,whiteSpace:'pre-wrap'}}>{t.body}</div>
+                    <div style={{fontSize:10,color:'var(--muted2)',marginTop:3,padding:'0 4px'}}>
+                      {isHQ?'HQ':t.name} · {new Date(t.at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="form-group" style={{marginBottom:0}}>
+            <label>Reply</label>
+            <textarea value={reply} onChange={e=>setReply(e.target.value)} rows={3} placeholder="Type your reply..." style={{resize:'vertical'}}/>
           </div>
-          {msg&&<div style={{fontSize:13,color:msg.startsWith('✓')?'var(--green)':'var(--red)',marginBottom:8}}>{msg}</div>}
+          {msg&&<div style={{fontSize:13,color:msg.startsWith('✓')?'var(--green)':'var(--red)',marginTop:8}}>{msg}</div>}
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Close</button>
-          <button className="btn btn-primary" onClick={sendReply} disabled={busy||!reply.trim()}>{busy?'Sending...':message.status==='replied'?'Update Reply':'Send Reply →'}</button>
+          <button className="btn btn-primary" onClick={sendReply} disabled={busy||!reply.trim()}>{busy?'Sending...':'Send Reply →'}</button>
         </div>
       </div>
     </div>
@@ -2537,12 +2587,52 @@ function ChangePassword({onDone}){
 // ── FRANCHISEE PORTAL ────────────────────────────────────
 function FranchiseePortal({session, profile}){
   const [portalView,setPortalView]=useState('tasks');
+  const [hqReplyCount,setHqReplyCount]=useState(0);
+  const [taskCount,setTaskCount]=useState(0);
+  const [announceCount,setAnnounceCount]=useState(0);
   const storeName=profile?.store||profile?.full_name||profile?.name||'My Store';
 
+  const resolveFrId=useCallback(async()=>{
+    let frId=profile?.franchisee_id;
+    if(!frId){
+      const sn=(profile?.store||profile?.full_name||'').trim();
+      const{data:allFr}=await sb.from('franchisees').select('id,store_name,name').eq('status','open');
+      const fr=(allFr||[]).find(f=>(f.store_name||'').toLowerCase()===sn.toLowerCase()||(f.name||'').toLowerCase()===sn.toLowerCase());
+      frId=fr?.id;
+    }
+    return frId;
+  },[profile]);
+
+  const refreshBadges=useCallback(async()=>{
+    const frId=await resolveFrId();
+    if(!frId){setHqReplyCount(0);setTaskCount(0);setAnnounceCount(0);return;}
+    // HQ replies awaiting franchisee
+    const{count:hqc}=await sb.from('ops_messages').select('id',{count:'exact',head:true}).eq('franchisee_id',frId).eq('last_sender_role','hq');
+    setHqReplyCount(hqc||0);
+    // Incomplete tasks (assignments not yet approved, on non-archived tasks)
+    const{data:assigns}=await sb.from('ops_assignments').select('status,ops_tasks(status)').eq('franchisee_id',frId);
+    // Tasks needing franchisee action: not yet submitted (pending/in_progress) or denied (rejected).
+    // submitted (awaiting HQ) and approved do NOT count.
+    const needsAction=(assigns||[]).filter(a=>a.ops_tasks?.status!=='archived'&&(a.status==='pending'||a.status==='in_progress'||a.status==='rejected')).length;
+    setTaskCount(needsAction);
+    // Unconfirmed announcements (active announcements without a confirmed receipt)
+    const[aRes,rRes]=await Promise.all([
+      sb.from('ops_announcements').select('id').eq('status','active'),
+      sb.from('ops_announcement_receipts').select('announcement_id,confirmed').eq('franchisee_id',frId),
+    ]);
+    const confirmedIds=new Set((rRes.data||[]).filter(r=>r.confirmed).map(r=>r.announcement_id));
+    const unconfirmed=(aRes.data||[]).filter(a=>!confirmedIds.has(a.id)).length;
+    setAnnounceCount(unconfirmed);
+  },[resolveFrId]);
+
+  useEffect(()=>{
+    refreshBadges();const t=setInterval(refreshBadges,60000);return()=>clearInterval(t);
+  },[refreshBadges]);
+
   const navItems=[
-    {key:'tasks',    icon:'▤', label:'My Tasks'},
-    {key:'announce', icon:'◈', label:'Announcements'},
-    {key:'contact',  icon:'✉', label:'Contact HQ'},
+    {key:'tasks',    icon:'▤', label:'My Tasks', badge:taskCount||null},
+    {key:'announce', icon:'◈', label:'Announcements', badge:announceCount||null},
+    {key:'contact',  icon:'✉', label:'Contact HQ', badge:hqReplyCount||null},
     {key:'warnings', icon:'⚠', label:'My Standing'},
     {key:'bot',      icon:'◉', label:'UglyBot'},
     {key:'password', icon:'◎', label:'Settings'},
@@ -2559,6 +2649,7 @@ function FranchiseePortal({session, profile}){
           {navItems.map(n=>(
             <button key={n.key} className={`nav-item ${portalView===n.key?'active':''}`} onClick={()=>setPortalView(n.key)}>
               <span style={{fontSize:15,width:20,textAlign:'center'}}>{n.icon}</span>{n.label}
+              {n.badge?<span className="nav-badge">{n.badge}</span>:null}
             </button>
           ))}
         </nav>
@@ -2572,9 +2663,9 @@ function FranchiseePortal({session, profile}){
           <div style={{fontSize:11,fontWeight:700,color:'var(--orange)',letterSpacing:'.12em',textTransform:'uppercase'}}>Franchisee Portal</div>
           <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{storeName}</div>
         </div>
-        {portalView==='tasks'&&<FranchiseeTasks profile={profile}/>}
-        {portalView==='announce'&&<FranchiseeAnnouncements profile={profile}/>}
-        {portalView==='contact'&&<ContactHQ profile={profile} storeName={storeName}/>}
+        {portalView==='tasks'&&<FranchiseeTasks profile={profile} onUpdate={refreshBadges}/>}
+        {portalView==='announce'&&<FranchiseeAnnouncements profile={profile} onUpdate={refreshBadges}/>}
+        {portalView==='contact'&&<ContactHQ profile={profile} storeName={storeName} onSeen={refreshBadges}/>}
         {portalView==='warnings'&&<FranchiseeWarnings profile={profile} storeName={storeName}/>}
         {portalView==='bot'&&<UglyBotPortal storeName={storeName}/>}
         {portalView==='password'&&<ChangePassword onDone={()=>setPortalView('tasks')}/>}
@@ -2587,7 +2678,7 @@ function FranchiseePortal({session, profile}){
 const MSG_TOPICS=['Operation','Marketing','Supply','Finance','HR','Management','Other'];
 const TOPIC_COLORS={Operation:'#14B8A6',Marketing:'#9B78D4',Supply:'#CC9C3A',Finance:'#5FB87A',HR:'#5B8FD4',Management:'#E0857A',Other:'#869490'};
 
-function ContactHQ({profile,storeName}){
+function ContactHQ({profile,storeName,onSeen}){
   const [topic,setTopic]=useState('');
   const [subject,setSubject]=useState('');
   const [body,setBody]=useState('');
@@ -2676,26 +2767,105 @@ function ContactHQ({profile,storeName}){
         {loading?<div className="loading">Loading...</div>:history.length===0?(
           <div style={{color:'var(--muted)',fontSize:13,padding:'20px 0'}}>No messages yet.</div>
         ):history.map(m=>(
-          <div key={m.id} style={{background:'var(--panel)',border:'1px solid var(--border)',borderLeft:`3px solid ${TOPIC_COLORS[m.topic]||'#869490'}`,borderRadius:10,padding:16,marginBottom:10}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
-              <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                <span style={{fontSize:11,fontWeight:700,background:(TOPIC_COLORS[m.topic]||'#869490')+'22',color:TOPIC_COLORS[m.topic]||'#869490',padding:'2px 8px',borderRadius:999}}>{m.topic}</span>
-                <span style={{fontSize:14,fontWeight:700}}>{m.subject}</span>
-              </div>
-              <span style={{fontSize:11,color:m.status==='replied'?'var(--green)':'var(--muted)'}}>{m.status==='replied'?'✓ Replied':'Awaiting reply'}</span>
-            </div>
-            <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.5,whiteSpace:'pre-wrap',marginBottom:m.hq_reply?10:0}}>{m.body}</div>
-            {m.hq_reply&&(
-              <div style={{background:'var(--panel2)',borderRadius:8,padding:12,marginTop:8,borderLeft:'2px solid var(--teal)'}}>
-                <div style={{fontSize:10,fontWeight:700,color:'var(--teal-bright)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:4}}>HQ Reply {m.replied_by?`· ${m.replied_by}`:''}</div>
-                <div style={{fontSize:13,lineHeight:1.5,whiteSpace:'pre-wrap'}}>{m.hq_reply}</div>
-              </div>
-            )}
-            <div style={{fontSize:10,color:'var(--muted2)',marginTop:8}}>{new Date(m.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}</div>
-          </div>
+          <FranchiseeThreadCard key={m.id} message={m} profile={profile} storeName={storeName} onReplied={()=>{loadHistory();if(onSeen)onSeen();}} onSeen={onSeen}/>
         ))}
       </div>
     </>
+  );
+}
+
+// Expandable conversation card for franchisee side
+function FranchiseeThreadCard({message,profile,storeName,onReplied,onSeen}){
+  const [open,setOpen]=useState(false);
+  const [replies,setReplies]=useState([]);
+  const [loading,setLoading]=useState(false);
+  const [reply,setReply]=useState('');
+  const [busy,setBusy]=useState(false);
+
+  async function loadReplies(){
+    setLoading(true);
+    const{data}=await sb.from('ops_message_replies').select('*').eq('message_id',message.id).order('created_at',{ascending:true});
+    setReplies(data||[]);
+    setLoading(false);
+  }
+  async function toggle(){
+    const next=!open;setOpen(next);
+    if(next){
+      loadReplies();
+      // If HQ was the last to respond, mark as seen so the badge clears
+      if(message.last_sender_role==='hq'){
+        await sb.from('ops_messages').update({last_sender_role:'seen'}).eq('id',message.id);
+        if(onSeen)onSeen();
+      }
+    }
+  }
+
+  async function sendReply(){
+    if(!reply.trim())return;
+    setBusy(true);
+    const{error}=await sb.from('ops_message_replies').insert([{
+      message_id:message.id,sender_role:'franchisee',
+      sender_name:profile?.full_name||profile?.name||storeName,body:reply.trim(),
+    }]);
+    if(error){setBusy(false);return;}
+    // Re-open the message for HQ: mark unread + status open + last sender franchisee
+    await sb.from('ops_messages').update({is_read:false,status:'open',last_sender_role:'franchisee'}).eq('id',message.id);
+    // Email HQ
+    try{
+      await fetch(EMAIL_FN,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          to:'hq@uglydonutsncorndogs.com',
+          subject:`[${message.topic}] ${storeName} replied: ${message.subject}`,
+          html:`<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0E0E0E;color:#F0EDE8;padding:28px;border-radius:12px;"><div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#14B8A6;margin-bottom:8px;">Franchise Ops · New Reply</div><h2 style="margin:0 0 4px;font-size:18px;">Re: ${message.subject}</h2><div style="font-size:13px;color:#8A8480;margin-bottom:16px;">From <strong style="color:#F0EDE8;">${storeName}</strong></div><div style="background:#1A2A28;border:1px solid #243634;border-radius:10px;padding:16px;font-size:14px;line-height:1.6;white-space:pre-wrap;">${reply.trim().replace(/</g,'&lt;')}</div><a href="https://uglyops.netlify.app" style="display:inline-block;margin-top:20px;background:#14B8A6;color:#04201C;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Reply in Franchise Ops →</a></div>`,
+        }),
+      });
+    }catch(e){/* best-effort */}
+    setReply('');
+    await loadReplies();
+    if(onReplied)onReplied();
+    setBusy(false);
+  }
+
+  const thread=buildThread(message,replies);
+  const replyCount=(message.hq_reply?1:0)+replies.length;
+
+  return(
+    <div style={{background:'var(--panel)',border:'1px solid var(--border)',borderLeft:`3px solid ${TOPIC_COLORS[message.topic]||'#869490'}`,borderRadius:10,padding:16,marginBottom:10}}>
+      <div onClick={toggle} style={{cursor:'pointer'}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <span style={{fontSize:11,fontWeight:700,background:(TOPIC_COLORS[message.topic]||'#869490')+'22',color:TOPIC_COLORS[message.topic]||'#869490',padding:'2px 8px',borderRadius:999}}>{message.topic}</span>
+            <span style={{fontSize:14,fontWeight:700}}>{message.subject}</span>
+          </div>
+          <span style={{fontSize:11,color:message.status==='replied'?'var(--green)':'var(--muted)'}}>{message.status==='replied'?'✓ Replied':'Awaiting reply'}{replyCount>0?` · ${replyCount}`:''} {open?'▲':'▼'}</span>
+        </div>
+        {!open&&<div style={{fontSize:13,color:'var(--muted)',lineHeight:1.5,whiteSpace:'pre-wrap'}}>{message.body.length>120?message.body.slice(0,120)+'...':message.body}</div>}
+      </div>
+
+      {open&&(
+        <div style={{marginTop:10}}>
+          {loading?<div style={{padding:'12px 0',color:'var(--muted)',fontSize:13}}>Loading...</div>:(
+            <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:14}}>
+              {thread.map((t,i)=>{
+                const isMe=t.role==='franchisee';
+                return(
+                  <div key={i} style={{display:'flex',flexDirection:'column',alignItems:isMe?'flex-end':'flex-start'}}>
+                    <div style={{maxWidth:'82%',background:isMe?'var(--panel2)':'var(--teal)',color:isMe?'var(--text)':'#04201C',borderRadius:isMe?'12px 12px 2px 12px':'12px 12px 12px 2px',padding:'11px 13px',fontSize:14,lineHeight:1.55,whiteSpace:'pre-wrap'}}>{t.body}</div>
+                    <div style={{fontSize:10,color:'var(--muted2)',marginTop:3,padding:'0 4px'}}>{t.role==='hq'?'HQ':'You'} · {new Date(t.at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div style={{display:'flex',gap:8,alignItems:'flex-end'}}>
+            <textarea value={reply} onChange={e=>setReply(e.target.value)} rows={2} placeholder="Reply to HQ..." style={{flex:1,background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:14,outline:'none',resize:'vertical'}}/>
+            <button className="btn btn-primary btn-sm" onClick={sendReply} disabled={busy||!reply.trim()}>{busy?'...':'Send'}</button>
+          </div>
+        </div>
+      )}
+      {!open&&<div style={{fontSize:10,color:'var(--muted2)',marginTop:8}}>{new Date(message.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}</div>}
+    </div>
   );
 }
 
@@ -2780,7 +2950,7 @@ function FranchiseeWarnings({profile,storeName}){
 }
 
 // ── FRANCHISEE TASKS ──────────────────────────────────────
-function FranchiseeTasks({profile}){
+function FranchiseeTasks({profile,onUpdate}){
   const [assignments,setAssignments]=useState([]);
   const [loading,setLoading]=useState(true);
   const [selected,setSelected]=useState(null);
@@ -2875,7 +3045,7 @@ function FranchiseeTasks({profile}){
           ))
         )}
       </div>
-      {selected&&<FranchiseeTaskModal assignment={selected} subtasks={subtasksMap[selected.id]||[]} completions={completionsMap[selected.id]||[]} onClose={()=>{setSelected(null);load();}}/>}
+      {selected&&<FranchiseeTaskModal assignment={selected} subtasks={subtasksMap[selected.id]||[]} completions={completionsMap[selected.id]||[]} onClose={()=>{setSelected(null);load();if(onUpdate)onUpdate();}}/>}
     </>
   );
 }
@@ -3043,7 +3213,7 @@ function FranchiseeTaskModal({assignment,subtasks,completions,onClose}){
 }
 
 // ── FRANCHISEE ANNOUNCEMENTS ──────────────────────────────
-function FranchiseeAnnouncements({profile}){
+function FranchiseeAnnouncements({profile,onUpdate}){
   const [announcements,setAnnouncements]=useState([]);
   const [receipts,setReceipts]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -3103,6 +3273,7 @@ function FranchiseeAnnouncements({profile}){
     // Only update UI after successful DB save
     const{data}=await sb.from('ops_announcement_receipts').select('*').eq('franchisee_id',franchiseeId);
     setReceipts(data||[]);
+    if(onUpdate)onUpdate();
   }
 
   const ANN_CATS=[
