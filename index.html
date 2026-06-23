@@ -570,7 +570,7 @@ function Dashboard({setView}){
         sb.from('franchisees').select('id,name,store_name,territory').in('status',['open','soft_open']),
         sb.from('ops_tasks').select('*').eq('status','active').order('created_at',{ascending:false}),
         sb.from('ops_assignments').select('ops_task_id,franchisee_id,status'),
-        sb.from('ops_announcements').select('*').eq('active',true).order('created_at',{ascending:false}),
+        sb.from('ops_announcements').select('*').eq('status','active').order('created_at',{ascending:false}),
         sb.from('ops_announcement_receipts').select('announcement_id,franchisee_id,confirmed'),
         sb.from('profiles').select('franchisee_id').eq('role','franchisee'),
       ]);
