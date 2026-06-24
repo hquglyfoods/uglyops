@@ -160,9 +160,15 @@ body.modal-open{overflow:hidden;}
   .app{flex-direction:column;}
   .sidebar{width:100%;height:auto;position:static;flex-direction:column;border-right:none;border-bottom:1px solid var(--border);}
   .sidebar-logo{padding:14px 16px 10px;}
-  /* nav becomes horizontal scroll */
-  .sidebar .nav{display:flex;flex-direction:row!important;flex-wrap:wrap;gap:6px;padding:8px 12px;}
-  .nav-item{white-space:nowrap;flex:0 0 auto;width:auto!important;padding:8px 12px;font-size:12px;}
+  /* nav becomes a button grid: franchisee (<=6 items) = 2 rows, HQ (9 items) = 3 rows */
+  .sidebar .nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 12px;}
+  .nav-item{position:relative;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;line-height:1.2;width:auto!important;min-height:46px;padding:8px 6px;font-size:12px;font-weight:600;border:1px solid var(--border2)!important;border-radius:10px;background:var(--panel2);}
+  .nav-item:hover{background:var(--panel2);}
+  .nav-item.active{background:rgba(20,184,166,.15);border-color:var(--teal)!important;color:var(--teal-bright);}
+  .nav-icon{display:none!important;}
+  .nav-badge{position:absolute;top:3px;right:5px;margin:0!important;min-width:16px;text-align:center;}
+  /* prevent iOS auto-zoom on input focus (font-size must be >=16px) */
+  input,textarea,select{font-size:16px!important;}
   .sidebar .sidebar-footer, .sidebar-bottom{flex-direction:row;overflow-x:auto;}
   .main{width:100%;}
   .page-header{padding:16px 16px 12px;flex-wrap:wrap;gap:10px;position:static;}
@@ -173,7 +179,7 @@ body.modal-open{overflow:hidden;}
   .form-row{grid-template-columns:1fr;}
   .card{padding:16px!important;}
   .modal-overlay{padding:0;align-items:flex-end;}
-  .modal{max-width:100%!important;width:100%!important;max-height:92vh;border-radius:16px 16px 0 0;}
+  .modal{max-width:100%!important;width:100%!important;max-height:100%!important;border-radius:16px 16px 0 0;}
   .modal-header{padding:16px;}
   .modal-body{padding:16px!important;}
   .modal-footer{padding:12px 16px;flex-wrap:wrap;}
@@ -518,9 +524,9 @@ function MainApp({view,setView,session}){
   },[refreshBadges]);
   const navItems=[
     {key:'dashboard', icon:'◈', label:'Dashboard'},
-    {key:'tasks',     icon:'▤', label:'Tasks & Announcements'},
+    {key:'tasks',     icon:'▤', label:'Tasks & Anmt'},
     {key:'broadcast', icon:'⊕', label:'New Task'},
-    {key:'announce',  icon:'◈', label:'New Announcement'},
+    {key:'announce',  icon:'◈', label:'New Anmt'},
     {key:'messages',  icon:'✉', label:'Messages', badge:unreadMsgs||null},
     {key:'warnings',  icon:'⚠', label:'Warnings', badge:reviewWarnings||null},
     {key:'stores',    icon:'◍', label:'Stores'},
@@ -538,7 +544,7 @@ function MainApp({view,setView,session}){
         <nav className="nav">
           {navItems.map(n=>(
             <button key={n.key} className={`nav-item ${view===n.key?'active':''}`} onClick={()=>setView(n.key)}>
-              <span style={{fontSize:15,width:20,textAlign:'center'}}>{n.icon}</span>{n.label}
+              <span className="nav-icon" style={{fontSize:15,width:20,textAlign:'center'}}>{n.icon}</span>{n.label}
               {n.badge?<span className="nav-badge">{n.badge}</span>:null}
             </button>
           ))}
@@ -1611,47 +1617,148 @@ function StoreList({setView}){
           );
         })()}
       </div>
-      {selected&&<StoreDetailModal store={selected} tasks={tasks} assignments={assignments} onClose={()=>setSelected(null)}/>}
+      {selected&&<StoreDetailModal store={selected} tasks={tasks} assignments={assignments} hasAccount={registeredStores.has(selected.store_name||selected.name)} onClose={()=>setSelected(null)}/>}
     </>
   );
 }
 
-function StoreDetailModal({store,tasks,assignments,onClose}){
+function StoreDetailModal({store,tasks,assignments,hasAccount,onClose}){
   const myAssigns=assignments.filter(a=>a.franchisee_id===store.id);
-  const [editStore,setEditStore]=useState(false);
   const [selected,setSelected]=useState(null);
   const [subtasks,setSubtasks]=useState([]);
+  const [warnings,setWarnings]=useState([]);
+  const [receipts,setReceipts]=useState([]);
+  const [loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    (async()=>{
+      const[wRes,rRes]=await Promise.all([
+        sb.from('ops_warnings').select('*').eq('franchisee_id',store.id).order('issued_at',{ascending:false}),
+        sb.from('ops_announcement_receipts').select('*,ops_announcements(title,category,created_at)').eq('franchisee_id',store.id),
+      ]);
+      setWarnings(wRes.data||[]);
+      setReceipts(rRes.data||[]);
+      setLoading(false);
+    })();
+  },[]);
 
   async function openAssignment(a){
     const{data}=await sb.from('ops_subtasks').select('*').eq('ops_task_id',a.ops_task_id).order('sort_order');
     setSubtasks(data||[]);setSelected(a);
   }
 
+  const taskTotal=myAssigns.length;
+  const taskApproved=myAssigns.filter(a=>a.status==='approved').length;
+  const taskPending=myAssigns.filter(a=>a.status==='submitted').length;
+  const taskRejected=myAssigns.filter(a=>a.status==='rejected').length;
+  const taskPct=taskTotal?Math.round(taskApproved/taskTotal*100):null;
+  const annTotal=receipts.length;
+  const annConfirmed=receipts.filter(r=>r.confirmed).length;
+  const annPct=annTotal?Math.round(annConfirmed/annTotal*100):null;
+  const oneYearAgo=new Date(Date.now()-365*24*60*60*1000);
+  const activeWarn=warnings.filter(w=>w.status!=='rescinded'&&new Date(w.issued_at)>=oneYearAgo).length;
+
+  let standing={label:'Good standing',color:'var(--green)',bg:'rgba(95,184,122,.12)',bd:'rgba(95,184,122,.3)'};
+  if(activeWarn>=3) standing={label:'At risk',color:'var(--red)',bg:'rgba(224,82,82,.12)',bd:'rgba(224,82,82,.35)'};
+  else if(activeWarn>=1||(taskPct!==null&&taskPct<60)||(annPct!==null&&annPct<60)) standing={label:'Needs attention',color:'var(--gold)',bg:'rgba(204,156,58,.12)',bd:'rgba(204,156,58,.3)'};
+
+  const pctColor=p=>p===null?'var(--muted)':p>=80?'var(--green)':p>=50?'var(--gold)':'var(--red)';
+
   return(
     <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
       <div className="modal modal-lg">
         <div className="modal-header">
           <div>
-            <div className="modal-title">{store.name}</div>
-            <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{store.territory}</div>
+            <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:3}}>
+              <span style={{fontSize:11,fontWeight:700,color:standing.color,background:standing.bg,border:`1px solid ${standing.bd}`,padding:'2px 10px',borderRadius:999}}>{standing.label}</span>
+              <span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:4,background:hasAccount?'rgba(95,184,122,.15)':'rgba(224,82,82,.15)',color:hasAccount?'var(--green)':'var(--red)'}}>{hasAccount?'✓ Ops account':'No Ops account'}</span>
+            </div>
+            <div className="modal-title" style={{margin:0}}>{store.store_name||store.name}</div>
+            <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{store.store_name&&<span style={{marginRight:6}}>{store.name} ·</span>}{store.territory}</div>
           </div>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         <div className="modal-body">
-          {tasks.length===0&&<div style={{color:'var(--muted)',textAlign:'center',padding:'30px 0'}}>No active tasks.</div>}
-          {tasks.map(t=>{
-            const assign=myAssigns.find(a=>a.ops_task_id===t.id);
-            const statusColors={pending:'var(--muted)',in_progress:'var(--blue)',submitted:'var(--gold)',approved:'var(--green)',rejected:'var(--red)'};
-            const status=assign?.status||'not_assigned';
+          <div style={{display:'flex',gap:14,flexWrap:'wrap',marginBottom:16,fontSize:12}}>
+            {store.email&&<a href={`mailto:${store.email}`} style={{color:'var(--blue)',textDecoration:'none'}}>✉ {store.email}</a>}
+            {store.phone&&<a href={`tel:${store.phone}`} style={{color:'var(--green)',textDecoration:'none'}}>{store.phone}</a>}
+          </div>
+
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:20}}>
+            <div style={{background:'var(--panel2)',borderRadius:10,padding:'12px 14px'}}>
+              <div style={{fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',fontWeight:700,marginBottom:4}}>Task completion</div>
+              <div style={{fontSize:22,fontWeight:800,color:pctColor(taskPct)}}>{taskPct===null?'—':taskPct+'%'}</div>
+              <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{taskApproved}/{taskTotal} approved</div>
+            </div>
+            <div style={{background:'var(--panel2)',borderRadius:10,padding:'12px 14px'}}>
+              <div style={{fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',fontWeight:700,marginBottom:4}}>Pending review</div>
+              <div style={{fontSize:22,fontWeight:800,color:taskPending>0?'var(--gold)':'var(--text)'}}>{taskPending}</div>
+              <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{taskRejected} rejected</div>
+            </div>
+            <div style={{background:'var(--panel2)',borderRadius:10,padding:'12px 14px'}}>
+              <div style={{fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',fontWeight:700,marginBottom:4}}>Announcements</div>
+              <div style={{fontSize:22,fontWeight:800,color:pctColor(annPct)}}>{annPct===null?'—':annPct+'%'}</div>
+              <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{annConfirmed}/{annTotal} confirmed</div>
+            </div>
+            <div style={{background:'var(--panel2)',borderRadius:10,padding:'12px 14px'}}>
+              <div style={{fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',fontWeight:700,marginBottom:4}}>Active warnings</div>
+              <div style={{fontSize:22,fontWeight:800,color:activeWarn>=3?'var(--red)':activeWarn>0?'var(--gold)':'var(--green)'}}>{activeWarn}<span style={{fontSize:13,color:'var(--muted)',fontWeight:600}}> / 3</span></div>
+              <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>{warnings.length} total</div>
+            </div>
+          </div>
+
+          <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:8}}>Assigned Tasks</div>
+          {tasks.length===0?<div style={{color:'var(--muted)',fontSize:13,padding:'6px 0 14px'}}>No active tasks.</div>:(
+            <div style={{marginBottom:20}}>
+              {tasks.map(t=>{
+                const assign=myAssigns.find(a=>a.ops_task_id===t.id);
+                const statusColors={pending:'var(--muted)',in_progress:'var(--blue)',submitted:'var(--gold)',approved:'var(--green)',rejected:'var(--red)'};
+                const status=assign?.status||'not_assigned';
+                return(
+                  <div key={t.id} style={{display:'flex',alignItems:'center',gap:12,padding:'11px 0',borderBottom:'1px solid var(--border)',cursor:assign?'pointer':'default'}}
+                    onClick={()=>assign&&openAssignment({...assign,franchisees:store})}>
+                    <span className={`cat-badge cat-${t.category}`}>{catLabel(t.category)}</span>
+                    <span style={{flex:1,fontSize:13,fontWeight:600}}>{t.title}</span>
+                    <span style={{fontSize:11,fontWeight:700,color:statusColors[status]||'var(--muted)',background:(statusColors[status]||'var(--muted)')+'22',padding:'2px 8px',borderRadius:4}}>
+                      {status==='not_assigned'?'Not Assigned':STATUS_LABELS[status]||status}
+                    </span>
+                    {assign&&<span style={{fontSize:11,color:'var(--muted)'}}>›</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:8}}>Announcement Confirmations</div>
+          {loading?<div style={{color:'var(--muted)',fontSize:13,padding:'6px 0 14px'}}>Loading...</div>:receipts.length===0?(
+            <div style={{color:'var(--muted)',fontSize:13,padding:'6px 0 14px'}}>No announcements assigned to this store.</div>
+          ):(
+            <div style={{marginBottom:20}}>
+              {receipts.map(r=>(
+                <div key={r.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+                  <span style={{flex:1,fontSize:13,fontWeight:600}}>{r.ops_announcements?.title||'(announcement)'}</span>
+                  <span style={{fontSize:11,fontWeight:700,color:r.confirmed?'var(--green)':'var(--muted)',background:r.confirmed?'rgba(95,184,122,.15)':'rgba(255,255,255,.05)',padding:'2px 8px',borderRadius:4}}>{r.confirmed?'✓ Confirmed':'Not confirmed'}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:8}}>Warning History</div>
+          {loading?<div style={{color:'var(--muted)',fontSize:13,padding:'6px 0'}}>Loading...</div>:warnings.length===0?(
+            <div style={{color:'var(--muted)',fontSize:13,padding:'6px 0'}}>No warnings on record. Clean standing.</div>
+          ):warnings.map(w=>{
+            const expired=new Date(w.issued_at)<oneYearAgo;
             return(
-              <div key={t.id} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 0',borderBottom:'1px solid var(--border)',cursor:assign?'pointer':'default'}}
-                onClick={()=>assign&&openAssignment({...assign,franchisees:store})}>
-                <span className={`cat-badge cat-${t.category}`}>{catLabel(t.category)}</span>
-                <span style={{flex:1,fontSize:13,fontWeight:600}}>{t.title}</span>
-                <span style={{fontSize:11,fontWeight:700,color:statusColors[status]||'var(--muted)',background:(statusColors[status]||'var(--muted)')+'22',padding:'2px 8px',borderRadius:4}}>
-                  {status==='not_assigned'?'Not Assigned':STATUS_LABELS[status]||status}
-                </span>
-                {assign&&<span style={{fontSize:11,color:'var(--muted)'}}>›</span>}
+              <div key={w.id} style={{background:'var(--panel2)',borderLeft:`3px solid ${w.status==='rescinded'?'var(--muted2)':w.status==='submitted'?'var(--gold)':expired?'var(--border2)':'var(--red)'}`,borderRadius:8,padding:'10px 12px',marginBottom:8,opacity:w.status==='rescinded'||expired?0.7:1}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:3}}>
+                  <span style={{fontSize:11,fontWeight:700,color:'var(--red)'}}>{w.category}</span>
+                  {w.status==='submitted'&&<span style={{fontSize:10,color:'var(--gold)',fontWeight:700,textTransform:'uppercase'}}>● Submitted</span>}
+                  {w.status==='registered'&&<span style={{fontSize:10,color:'var(--red)',fontWeight:700,textTransform:'uppercase'}}>✓ Registered</span>}
+                  {w.status==='rescinded'&&<span style={{fontSize:10,color:'var(--muted)',fontWeight:700,textTransform:'uppercase'}}>Rescinded</span>}
+                  {expired&&w.status!=='rescinded'&&<span style={{fontSize:10,color:'var(--muted)',fontWeight:700,textTransform:'uppercase'}}>Expired</span>}
+                  <span style={{marginLeft:'auto',fontSize:11,color:'var(--muted)'}}>{new Date(w.issued_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
+                </div>
+                <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.5}}>{w.reason.length>120?w.reason.slice(0,120)+'...':w.reason}</div>
               </div>
             );
           })}
@@ -1687,6 +1794,7 @@ function HQWarnings({onUpdate}){
   const [loading,setLoading]=useState(true);
   const [showIssue,setShowIssue]=useState(false);
   const [detail,setDetail]=useState(null);
+  const [storeView,setStoreView]=useState(null);
 
   async function load(){
     setLoading(true);
@@ -1735,7 +1843,8 @@ function HQWarnings({onUpdate}){
               const c=s.count;
               const color=c>=3?'var(--red)':c===2?'var(--gold)':c===1?'var(--blue)':'var(--green)';
               return(
-                <div key={s.id} style={{background:'var(--panel)',border:`1px solid ${c>=3?'rgba(224,82,82,.35)':'var(--border)'}`,borderRadius:10,padding:14}}>
+                <div key={s.id} onClick={()=>setStoreView(s)} style={{background:'var(--panel)',border:`1px solid ${c>=3?'rgba(224,82,82,.35)':'var(--border)'}`,borderRadius:10,padding:14,cursor:'pointer',transition:'border-color .15s'}}
+                  onMouseEnter={e=>e.currentTarget.style.borderColor='var(--teal)'} onMouseLeave={e=>e.currentTarget.style.borderColor=c>=3?'rgba(224,82,82,.35)':'var(--border)'}>
                   <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>{s.store_name||s.name}</div>
                   <div style={{fontSize:11,color:'var(--muted)',marginBottom:10}}>{s.territory}</div>
                   <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -1745,6 +1854,7 @@ function HQWarnings({onUpdate}){
                       ))}
                     </div>
                     <span style={{fontSize:12,fontWeight:700,color}}>{c}/3</span>
+                    <span style={{marginLeft:'auto',fontSize:11,color:'var(--muted2)',fontWeight:600}}>View →</span>
                   </div>
                 </div>
               );
@@ -1780,8 +1890,78 @@ function HQWarnings({onUpdate}){
         })}
       </div>
       {showIssue&&<IssueWarningModal stores={stores} onClose={()=>{setShowIssue(false);load();if(onUpdate)onUpdate();}}/>}
+      {storeView&&<StoreWarningsModal store={storeView} warnings={warnings.filter(w=>w.franchisee_id===storeView.id)} onSelect={(w)=>{setStoreView(null);setDetail(w);}} onClose={()=>setStoreView(null)}/>}
       {detail&&<WarningDetailModal warning={detail} onClose={()=>{setDetail(null);load();if(onUpdate)onUpdate();}}/>}
     </>
+  );
+}
+
+// Popup: full warning history for one store (HQ Warnings)
+function StoreWarningsModal({store,warnings,onSelect,onClose}){
+  const oneYearAgo=new Date(Date.now()-365*24*60*60*1000);
+  const active=warnings.filter(w=>w.status!=='rescinded'&&new Date(w.issued_at)>=oneYearAgo).length;
+  const registered=warnings.filter(w=>w.status==='registered').length;
+  const rescinded=warnings.filter(w=>w.status==='rescinded').length;
+  const color=active>=3?'var(--red)':active===2?'var(--gold)':active===1?'var(--blue)':'var(--green)';
+  const sorted=[...warnings].sort((a,b)=>new Date(b.issued_at)-new Date(a.issued_at));
+  return(
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal modal-lg">
+        <div className="modal-header">
+          <div>
+            <div className="modal-title" style={{margin:0}}>{store.store_name||store.name}</div>
+            <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{store.territory} · Warning history</div>
+          </div>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:18}}>
+            <div style={{background:'var(--panel2)',borderRadius:10,padding:'12px 14px'}}>
+              <div style={{fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',fontWeight:700,marginBottom:4}}>Active (12mo)</div>
+              <div style={{fontSize:22,fontWeight:800,color}}>{active}<span style={{fontSize:13,color:'var(--muted)',fontWeight:600}}> / 3</span></div>
+            </div>
+            <div style={{background:'var(--panel2)',borderRadius:10,padding:'12px 14px'}}>
+              <div style={{fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',fontWeight:700,marginBottom:4}}>Registered</div>
+              <div style={{fontSize:22,fontWeight:800}}>{registered}</div>
+            </div>
+            <div style={{background:'var(--panel2)',borderRadius:10,padding:'12px 14px'}}>
+              <div style={{fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',fontWeight:700,marginBottom:4}}>Rescinded</div>
+              <div style={{fontSize:22,fontWeight:800}}>{rescinded}</div>
+            </div>
+            <div style={{background:'var(--panel2)',borderRadius:10,padding:'12px 14px'}}>
+              <div style={{fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',fontWeight:700,marginBottom:4}}>Total</div>
+              <div style={{fontSize:22,fontWeight:800}}>{warnings.length}</div>
+            </div>
+          </div>
+          {active>=3&&<div style={{background:'rgba(224,82,82,.1)',border:'1px solid rgba(224,82,82,.35)',borderRadius:8,padding:12,marginBottom:16,fontSize:13,color:'var(--red)',fontWeight:700}}>⚠ At termination review threshold (3+ active warnings in 12 months).</div>}
+          {sorted.length===0?(
+            <div style={{color:'var(--muted)',fontSize:13,padding:'10px 0'}}>No warnings on record for this store.</div>
+          ):sorted.map(w=>{
+            const expired=new Date(w.issued_at)<oneYearAgo;
+            const dl=deadlineInfo(w.deadline);
+            return(
+              <div key={w.id} onClick={()=>onSelect(w)} style={{background:'var(--panel)',border:'1px solid var(--border)',borderLeft:`3px solid ${w.status==='rescinded'?'var(--muted2)':w.status==='submitted'?'var(--gold)':expired?'var(--border2)':'var(--red)'}`,borderRadius:10,padding:13,marginBottom:8,cursor:'pointer',opacity:w.status==='rescinded'||expired?0.7:1}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4,flexWrap:'wrap',gap:6}}>
+                  <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                    <span style={{fontSize:11,fontWeight:700,background:'rgba(224,82,82,.15)',color:'var(--red)',padding:'2px 8px',borderRadius:999}}>{w.category}</span>
+                    {w.status==='submitted'&&<span style={{fontSize:10,color:'var(--gold)',fontWeight:700,textTransform:'uppercase'}}>● Submitted for review</span>}
+                    {w.status==='registered'&&<span style={{fontSize:10,color:'var(--red)',fontWeight:700,textTransform:'uppercase'}}>✓ Registered</span>}
+                    {w.status==='rescinded'&&<span style={{fontSize:10,color:'var(--muted)',fontWeight:700,textTransform:'uppercase'}}>Rescinded</span>}
+                    {expired&&w.status!=='rescinded'&&<span style={{fontSize:10,color:'var(--muted)',fontWeight:700,textTransform:'uppercase'}}>Expired (&gt;12mo)</span>}
+                    {dl&&w.status!=='rescinded'&&!expired&&<span style={{fontSize:10,fontWeight:700,color:dl.color,border:`1px solid ${dl.color}`,padding:'1px 7px',borderRadius:999}}>{dl.label}</span>}
+                  </div>
+                  <span style={{fontSize:11,color:'var(--muted)'}}>{new Date(w.issued_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
+                </div>
+                <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.5}}>{w.reason.length>140?w.reason.slice(0,140)+'...':w.reason}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -3155,7 +3335,7 @@ function FranchiseePortal({session, profile}){
         <nav className="nav">
           {navItems.map(n=>(
             <button key={n.key} className={`nav-item ${portalView===n.key?'active':''}`} onClick={()=>setPortalView(n.key)}>
-              <span style={{fontSize:15,width:20,textAlign:'center'}}>{n.icon}</span>{n.label}
+              <span className="nav-icon" style={{fontSize:15,width:20,textAlign:'center'}}>{n.icon}</span>{n.label}
               {n.badge?<span className="nav-badge">{n.badge}</span>:null}
             </button>
           ))}
@@ -3964,26 +4144,33 @@ function UglyBotPortal({storeName}){
     messagesEndRef.current?.scrollIntoView({behavior:'smooth'});
   },[messages]);
 
-  // Mobile keyboard handling: size the chat shell to the visible area (above the
-  // keyboard) so the input bar stays put and the last message sits just above it.
+  // Mobile keyboard handling. On phones we lock the page itself from scrolling and
+  // size the chat shell to the space between its top and the bottom of the *visible*
+  // viewport. Because the page can't scroll, the shell's top stays fixed, so resizing
+  // is stable (no oscillation) and the input bar always sits just above the keyboard.
   React.useEffect(()=>{
     const vv=window.visualViewport;
     const el=shellRef.current;
-    if(!vv||!el)return;
+    if(!el)return;
+    const isMobile=()=>window.innerWidth<=768;
     function fit(){
-      if(window.innerWidth>768){el.style.height='';return;}
-      const top=el.getBoundingClientRect().top-vv.offsetTop;
-      el.style.height=Math.max(220,vv.height-top)+'px';
+      if(!isMobile()){el.style.height='';document.body.style.overflow='';return;}
+      document.body.style.overflow='hidden';
+      const top=el.getBoundingClientRect().top;
+      const vh=vv?vv.height:window.innerHeight;
+      el.style.height=Math.max(180,vh-top)+'px';
       messagesEndRef.current?.scrollIntoView();
     }
     fit();
-    vv.addEventListener('resize',fit);
-    vv.addEventListener('scroll',fit);
+    if(vv)vv.addEventListener('resize',fit);
+    window.addEventListener('resize',fit);
     window.addEventListener('orientationchange',fit);
     return ()=>{
-      vv.removeEventListener('resize',fit);
-      vv.removeEventListener('scroll',fit);
+      if(vv)vv.removeEventListener('resize',fit);
+      window.removeEventListener('resize',fit);
       window.removeEventListener('orientationchange',fit);
+      document.body.style.overflow='';
+      el.style.height='';
     };
   },[]);
 
@@ -4057,13 +4244,25 @@ function UglyBotPortal({storeName}){
 }
 
 
-// Lock background scroll while any modal overlay is on screen (prevents the page
-// behind a popup from scrolling, especially on mobile).
+// Background scroll lock while a modal is open, plus (on mobile) pin each modal
+// overlay to the visible viewport so its input stays above the on-screen keyboard.
 (function(){
+  const vv=window.visualViewport;
   let scheduled=false;
-  const apply=()=>{scheduled=false;document.body.classList.toggle('modal-open',!!document.querySelector('.modal-overlay'));};
-  const mo=new MutationObserver(()=>{if(!scheduled){scheduled=true;requestAnimationFrame(apply);}});
-  mo.observe(document.body,{childList:true,subtree:true});
+  function apply(){
+    scheduled=false;
+    const overlays=document.querySelectorAll('.modal-overlay');
+    document.body.classList.toggle('modal-open',overlays.length>0);
+    const mobile=window.innerWidth<=768;
+    overlays.forEach(o=>{
+      if(mobile&&vv){o.style.height=vv.height+'px';o.style.top=vv.offsetTop+'px';o.style.bottom='auto';}
+      else{o.style.height='';o.style.top='';o.style.bottom='';}
+    });
+  }
+  const schedule=()=>{if(!scheduled){scheduled=true;requestAnimationFrame(apply);}};
+  new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
+  if(vv){vv.addEventListener('resize',schedule);vv.addEventListener('scroll',schedule);}
+  window.addEventListener('resize',schedule);
 })();
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
