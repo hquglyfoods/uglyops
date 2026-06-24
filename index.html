@@ -54,6 +54,9 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--text);mi
 .page-title{font-size:20px;font-weight:700;}
 .page-sub{font-size:13px;color:var(--muted);margin-top:2px;}
 .content{padding:24px 32px;}
+.bot-shell{display:flex;flex-direction:column;height:calc(100vh - 89px);}
+.bot-msgs{flex:1;overflow-y:auto;min-height:0;padding:20px 32px;}
+.bot-input{padding:16px 32px;border-top:1px solid var(--border);background:var(--panel);display:flex;gap:10px;}
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:all .15s;}
 .btn-primary{background:var(--teal);color:#04201C;font-weight:700;}
@@ -148,12 +151,17 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--text);mi
 
 /* ===== MOBILE RESPONSIVE ===== */
 @media (max-width:768px){
+  html,body{overflow-x:hidden;max-width:100%;}
+  .auth-wrap{padding:16px;}
+  .auth-card{width:100%!important;max-width:400px;padding:28px 22px;}
+  .bot-msgs{padding:14px 16px!important;}
+  .bot-input{padding:12px 16px!important;}
   .app{flex-direction:column;}
   .sidebar{width:100%;height:auto;position:static;flex-direction:column;border-right:none;border-bottom:1px solid var(--border);}
   .sidebar-logo{padding:14px 16px 10px;}
   /* nav becomes horizontal scroll */
-  .sidebar .nav{display:flex;flex-direction:row!important;overflow-x:auto;gap:4px;padding:8px 12px;-webkit-overflow-scrolling:touch;}
-  .nav-item{white-space:nowrap;flex-shrink:0;width:auto!important;padding:8px 12px;font-size:12px;}
+  .sidebar .nav{display:flex;flex-direction:row!important;flex-wrap:wrap;gap:6px;padding:8px 12px;}
+  .nav-item{white-space:nowrap;flex:0 0 auto;width:auto!important;padding:8px 12px;font-size:12px;}
   .sidebar .sidebar-footer, .sidebar-bottom{flex-direction:row;overflow-x:auto;}
   .main{width:100%;}
   .page-header{padding:16px 16px 12px;flex-wrap:wrap;gap:10px;position:static;}
@@ -3165,13 +3173,10 @@ const MSG_TOPICS=['Operation','Marketing','Supply','Finance','HR','Management','
 const TOPIC_COLORS={Operation:'#14B8A6',Marketing:'#9B78D4',Supply:'#CC9C3A',Finance:'#5FB87A',HR:'#5B8FD4',Management:'#E0857A',Other:'#869490'};
 
 function ContactHQ({profile,storeName,onSeen}){
-  const [topic,setTopic]=useState('');
-  const [subject,setSubject]=useState('');
-  const [body,setBody]=useState('');
-  const [busy,setBusy]=useState(false);
-  const [msg,setMsg]=useState('');
   const [history,setHistory]=useState([]);
   const [loading,setLoading]=useState(true);
+  const [showNew,setShowNew]=useState(false);
+  const [activeThread,setActiveThread]=useState(null);
 
   async function loadHistory(){
     setLoading(true);
@@ -3184,20 +3189,67 @@ function ContactHQ({profile,storeName,onSeen}){
   }
   useEffect(()=>{loadHistory();},[]);
 
+  const unreadCount=history.filter(m=>m.last_sender_role==='hq').length;
+
+  return(
+    <>
+      <div className="page-header">
+        <div>
+          <div className="page-title" style={{display:'flex',alignItems:'center',gap:8}}>Contact HQ{unreadCount>0&&<span style={{background:'var(--red)',color:'#fff',borderRadius:999,fontSize:11,fontWeight:700,padding:'1px 8px'}}>{unreadCount}</span>}</div>
+          <div className="page-sub">Messages with headquarters</div>
+        </div>
+        <button className="btn btn-primary" onClick={()=>setShowNew(true)}>+ New Message</button>
+      </div>
+      <div className="content">
+        <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:12}}>Message History</div>
+        {loading?<div className="loading">Loading...</div>:history.length===0?(
+          <div style={{color:'var(--muted)',fontSize:13,padding:'20px 0'}}>No messages yet. Tap "+ New Message" to reach HQ.</div>
+        ):history.map(m=>{
+          const unread=m.last_sender_role==='hq';
+          return(
+            <div key={m.id} onClick={()=>setActiveThread(m)} style={{cursor:'pointer',background:'var(--panel)',border:`1px solid ${unread?'rgba(20,184,166,.45)':'var(--border)'}`,borderLeft:`3px solid ${TOPIC_COLORS[m.topic]||'#869490'}`,borderRadius:10,padding:14,marginBottom:10,transition:'border-color .15s'}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor=unread?'var(--teal)':'var(--border2)'} onMouseLeave={e=>e.currentTarget.style.borderColor=unread?'rgba(20,184,166,.45)':'var(--border)'}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6,gap:8,flexWrap:'wrap'}}>
+                <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                  <span style={{fontSize:11,fontWeight:700,background:(TOPIC_COLORS[m.topic]||'#869490')+'22',color:TOPIC_COLORS[m.topic]||'#869490',padding:'2px 8px',borderRadius:999}}>{m.topic}</span>
+                  <span style={{fontSize:14,fontWeight:700}}>{m.subject}</span>
+                  {unread&&<span style={{background:'var(--teal)',color:'#04201C',borderRadius:999,fontSize:10,fontWeight:700,padding:'1px 7px'}}>New reply</span>}
+                </div>
+                <span style={{fontSize:11,color:unread?'var(--teal-bright)':m.status==='replied'?'var(--green)':'var(--muted)'}}>{unread?'● HQ replied':m.status==='replied'?'✓ Replied':'Awaiting reply'}</span>
+              </div>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
+                <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.body}</div>
+                <span style={{fontSize:11,color:'var(--muted2)',fontWeight:600,whiteSpace:'nowrap'}}>Open →</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {showNew&&<NewMessageModal profile={profile} storeName={storeName} onClose={()=>setShowNew(false)} onSent={()=>{setShowNew(false);loadHistory();if(onSeen)onSeen();}}/>}
+      {activeThread&&<FranchiseeThreadModal message={activeThread} profile={profile} storeName={storeName} onClose={()=>{setActiveThread(null);loadHistory();if(onSeen)onSeen();}} onSeen={onSeen}/>}
+    </>
+  );
+}
+
+// New message compose modal (franchisee → HQ)
+function NewMessageModal({profile,storeName,onClose,onSent}){
+  const [topic,setTopic]=useState('');
+  const [subject,setSubject]=useState('');
+  const [body,setBody]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [msg,setMsg]=useState('');
+
   async function send(){
     if(!topic){setMsg('Please choose a topic.');return;}
     if(!subject.trim()||!body.trim()){setMsg('Subject and message are required.');return;}
     setBusy(true);setMsg('');
-    // Resolve franchisee_id
     const frId=await resolveFranchiseeId(profile);
     const{error}=await sb.from('ops_messages').insert([{
-      franchisee_id:frId||null,
-      store_name:storeName,
+      franchisee_id:frId||null,store_name:storeName,
       sender_name:profile?.full_name||profile?.name||storeName,
       topic,subject:subject.trim(),body:body.trim(),status:'open',is_read:false,
     }]);
     if(error){setMsg('Error: '+error.message);setBusy(false);return;}
-    // Notify HQ via email (best-effort)
     try{
       await fetch(EMAIL_FN,{
         method:'POST',headers:{'Content-Type':'application/json'},
@@ -3208,18 +3260,18 @@ function ContactHQ({profile,storeName,onSeen}){
         }),
       });
     }catch(e){/* email best-effort */}
-    setMsg('✓ Message sent to HQ. They will respond soon.');
-    setTopic('');setSubject('');setBody('');
-    loadHistory();
     setBusy(false);
+    if(onSent)onSent();
   }
 
   return(
-    <>
-      <div className="page-header"><div><div className="page-title">Contact HQ</div><div className="page-sub">Send a message to headquarters</div></div></div>
-      <div className="content">
-        <div className="card" style={{maxWidth:640,marginBottom:24}}>
-          <div style={{fontWeight:700,marginBottom:14}}>New Message</div>
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">New Message to HQ</div>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
           <div className="form-group">
             <label>Topic</label>
             <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:4}}>
@@ -3233,26 +3285,21 @@ function ContactHQ({profile,storeName,onSeen}){
           </div>
           <div className="form-group"><label>Subject</label><input value={subject} onChange={e=>setSubject(e.target.value)} placeholder="Brief subject line"/></div>
           <div className="form-group"><label>Message</label><textarea value={body} onChange={e=>setBody(e.target.value)} rows={5} placeholder="Describe your question or issue..." style={{resize:'vertical'}}/></div>
-          {msg&&<div style={{padding:12,background:msg.startsWith('✓')?'rgba(95,184,122,.1)':'rgba(224,82,82,.1)',border:`1px solid ${msg.startsWith('✓')?'rgba(95,184,122,.3)':'rgba(224,82,82,.3)'}`,borderRadius:8,fontSize:13,color:msg.startsWith('✓')?'var(--green)':'var(--red)',marginBottom:12}}>{msg}</div>}
-          <button className="btn btn-primary" onClick={send} disabled={busy||!topic||!subject.trim()||!body.trim()}>{busy?'Sending...':'Send to HQ →'}</button>
+          {msg&&<div style={{padding:12,background:msg.startsWith('✓')?'rgba(95,184,122,.1)':'rgba(224,82,82,.1)',border:`1px solid ${msg.startsWith('✓')?'rgba(95,184,122,.3)':'rgba(224,82,82,.3)'}`,borderRadius:8,fontSize:13,color:msg.startsWith('✓')?'var(--green)':'var(--red)'}}>{msg}</div>}
         </div>
-
-        <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:12}}>Message History</div>
-        {loading?<div className="loading">Loading...</div>:history.length===0?(
-          <div style={{color:'var(--muted)',fontSize:13,padding:'20px 0'}}>No messages yet.</div>
-        ):history.map(m=>(
-          <FranchiseeThreadCard key={m.id} message={m} profile={profile} storeName={storeName} onReplied={()=>{loadHistory();if(onSeen)onSeen();}} onSeen={onSeen}/>
-        ))}
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={send} disabled={busy||!topic||!subject.trim()||!body.trim()}>{busy?'Sending...':'Send to HQ'}</button>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
-// Expandable conversation card for franchisee side
-function FranchiseeThreadCard({message,profile,storeName,onReplied,onSeen}){
-  const [open,setOpen]=useState(false);
+// Conversation thread modal (franchisee side)
+function FranchiseeThreadModal({message,profile,storeName,onClose,onSeen}){
   const [replies,setReplies]=useState([]);
-  const [loading,setLoading]=useState(false);
+  const [loading,setLoading]=useState(true);
   const [reply,setReply]=useState('');
   const [busy,setBusy]=useState(false);
 
@@ -3262,17 +3309,12 @@ function FranchiseeThreadCard({message,profile,storeName,onReplied,onSeen}){
     setReplies(data||[]);
     setLoading(false);
   }
-  async function toggle(){
-    const next=!open;setOpen(next);
-    if(next){
-      loadReplies();
-      // If HQ was the last to respond, mark as seen so the badge clears
-      if(message.last_sender_role==='hq'){
-        await sb.from('ops_messages').update({last_sender_role:'seen'}).eq('id',message.id);
-        if(onSeen)onSeen();
-      }
+  useEffect(()=>{
+    loadReplies();
+    if(message.last_sender_role==='hq'){
+      sb.from('ops_messages').update({last_sender_role:'seen'}).eq('id',message.id).then(()=>{if(onSeen)onSeen();});
     }
-  }
+  },[]);
 
   async function sendReply(){
     if(!reply.trim())return;
@@ -3282,9 +3324,7 @@ function FranchiseeThreadCard({message,profile,storeName,onReplied,onSeen}){
       sender_name:profile?.full_name||profile?.name||storeName,body:reply.trim(),
     }]);
     if(error){setBusy(false);return;}
-    // Re-open the message for HQ: mark unread + status open + last sender franchisee
     await sb.from('ops_messages').update({is_read:false,status:'open',last_sender_role:'franchisee'}).eq('id',message.id);
-    // Email HQ
     try{
       await fetch(EMAIL_FN,{
         method:'POST',headers:{'Content-Type':'application/json'},
@@ -3297,30 +3337,26 @@ function FranchiseeThreadCard({message,profile,storeName,onReplied,onSeen}){
     }catch(e){/* best-effort */}
     setReply('');
     await loadReplies();
-    if(onReplied)onReplied();
     setBusy(false);
   }
 
   const thread=buildThread(message,replies);
-  const replyCount=(message.hq_reply?1:0)+replies.length;
 
   return(
-    <div style={{background:'var(--panel)',border:'1px solid var(--border)',borderLeft:`3px solid ${TOPIC_COLORS[message.topic]||'#869490'}`,borderRadius:10,padding:16,marginBottom:10}}>
-      <div onClick={toggle} style={{cursor:'pointer'}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
-          <div style={{display:'flex',gap:8,alignItems:'center'}}>
-            <span style={{fontSize:11,fontWeight:700,background:(TOPIC_COLORS[message.topic]||'#869490')+'22',color:TOPIC_COLORS[message.topic]||'#869490',padding:'2px 8px',borderRadius:999}}>{message.topic}</span>
-            <span style={{fontSize:14,fontWeight:700}}>{message.subject}</span>
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div>
+            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:3,flexWrap:'wrap'}}>
+              <span style={{fontSize:11,fontWeight:700,background:(TOPIC_COLORS[message.topic]||'#869490')+'22',color:TOPIC_COLORS[message.topic]||'#869490',padding:'2px 8px',borderRadius:999}}>{message.topic}</span>
+            </div>
+            <div className="modal-title" style={{margin:0}}>{message.subject}</div>
           </div>
-          <span style={{fontSize:11,color:message.status==='replied'?'var(--green)':'var(--muted)'}}>{message.status==='replied'?'✓ Replied':'Awaiting reply'}{replyCount>0?` · ${replyCount}`:''} {open?'▲':'▼'}</span>
+          <button className="close-btn" onClick={onClose}>×</button>
         </div>
-        {!open&&<div style={{fontSize:13,color:'var(--muted)',lineHeight:1.5,whiteSpace:'pre-wrap'}}>{message.body.length>120?message.body.slice(0,120)+'...':message.body}</div>}
-      </div>
-
-      {open&&(
-        <div style={{marginTop:10}}>
+        <div className="modal-body">
           {loading?<div style={{padding:'12px 0',color:'var(--muted)',fontSize:13}}>Loading...</div>:(
-            <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:14}}>
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {thread.map((t,i)=>{
                 const isMe=t.role==='franchisee';
                 return(
@@ -3332,13 +3368,15 @@ function FranchiseeThreadCard({message,profile,storeName,onReplied,onSeen}){
               })}
             </div>
           )}
-          <div style={{display:'flex',gap:8,alignItems:'flex-end'}}>
-            <textarea value={reply} onChange={e=>setReply(e.target.value)} rows={2} placeholder="Reply to HQ..." style={{flex:1,background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:14,outline:'none',resize:'vertical'}}/>
-            <button className="btn btn-primary btn-sm" onClick={sendReply} disabled={busy||!reply.trim()}>{busy?'...':'Send'}</button>
+        </div>
+        <div className="modal-footer" style={{flexDirection:'column',alignItems:'stretch',gap:8}}>
+          <textarea value={reply} onChange={e=>setReply(e.target.value)} rows={2} placeholder="Reply to HQ..." style={{width:'100%',background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:14,outline:'none',resize:'vertical'}}/>
+          <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+            <button className="btn btn-ghost" onClick={onClose}>Close</button>
+            <button className="btn btn-primary" onClick={sendReply} disabled={busy||!reply.trim()}>{busy?'...':'Send Reply'}</button>
           </div>
         </div>
-      )}
-      {!open&&<div style={{fontSize:10,color:'var(--muted2)',marginTop:8}}>{new Date(message.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}</div>}
+      </div>
     </div>
   );
 }
@@ -3899,10 +3937,34 @@ function UglyBotPortal({storeName}){
   const [input,setInput]=useState('');
   const [busy,setBusy]=useState(false);
   const messagesEndRef=React.useRef(null);
+  const shellRef=React.useRef(null);
 
   React.useEffect(()=>{
     messagesEndRef.current?.scrollIntoView({behavior:'smooth'});
   },[messages]);
+
+  // Mobile keyboard handling: size the chat shell to the visible area (above the
+  // keyboard) so the input bar stays put and the last message sits just above it.
+  React.useEffect(()=>{
+    const vv=window.visualViewport;
+    const el=shellRef.current;
+    if(!vv||!el)return;
+    function fit(){
+      if(window.innerWidth>768){el.style.height='';return;}
+      const top=el.getBoundingClientRect().top-vv.offsetTop;
+      el.style.height=Math.max(220,vv.height-top)+'px';
+      messagesEndRef.current?.scrollIntoView();
+    }
+    fit();
+    vv.addEventListener('resize',fit);
+    vv.addEventListener('scroll',fit);
+    window.addEventListener('orientationchange',fit);
+    return ()=>{
+      vv.removeEventListener('resize',fit);
+      vv.removeEventListener('scroll',fit);
+      window.removeEventListener('orientationchange',fit);
+    };
+  },[]);
 
   async function send(){
     if(!input.trim()||busy)return;
@@ -3933,9 +3995,9 @@ function UglyBotPortal({storeName}){
       <div className="page-header">
         <div><div className="page-title">UglyBot</div><div className="page-sub">AI assistant for operations, recipes, and support</div></div>
       </div>
-      <div style={{display:'flex',flexDirection:'column',height:'calc(100vh - 89px)'}}>
+      <div ref={shellRef} className="bot-shell">
         {/* Messages */}
-        <div style={{flex:1,overflowY:'auto',padding:'20px 32px'}}>
+        <div className="bot-msgs">
           {messages.map((m,i)=>(
             <div key={i} style={{display:'flex',gap:12,marginBottom:16,justifyContent:m.role==='user'?'flex-end':'flex-start'}}>
               {m.role==='assistant'&&(
@@ -3959,8 +4021,9 @@ function UglyBotPortal({storeName}){
           <div ref={messagesEndRef}/>
         </div>
         {/* Input */}
-        <div style={{padding:'16px 32px',borderTop:'1px solid var(--border)',background:'var(--panel)',display:'flex',gap:10}}>
+        <div className="bot-input">
           <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()}
+            onFocus={()=>setTimeout(()=>messagesEndRef.current?.scrollIntoView(),300)}
             placeholder="Ask about recipes, operations, procedures..." disabled={busy}
             style={{flex:1,background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:10,padding:'12px 16px',color:'var(--text)',fontFamily:'inherit',fontSize:14,outline:'none'}}/>
           <button className="btn btn-primary" onClick={send} disabled={busy||!input.trim()} style={{borderRadius:10,padding:'12px 20px'}}>
