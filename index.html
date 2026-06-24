@@ -2543,6 +2543,7 @@ function AccountManager({onBadgeRefresh}){
   const [filterRole,setFilterRole]=useState('all');
   const [acctSearch,setAcctSearch]=useState('');
   const [pop,setPop]=useState(null);
+  const [showPending,setShowPending]=useState(false);
   const [showInvite,setShowInvite]=useState(false);
   const [invForm,setInvForm]=useState({email:'',name:'',title:'COO'});
   const [invBusy,setInvBusy]=useState(false);
@@ -2668,7 +2669,7 @@ function AccountManager({onBadgeRefresh}){
     const s=(text==null||text==='')?'—':String(text);
     const base={fontWeight:bold?600:undefined,fontSize:muted?12:undefined,color:muted?'var(--muted)':undefined};
     if(s.length<=12)return <span style={base}>{s}</span>;
-    return <span onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setPop({text:s,x:Math.max(8,Math.min(r.left,window.innerWidth-228)),y:r.bottom+6});}}
+    return <span onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();const above=r.bottom>window.innerHeight*0.55;setPop({text:s,x:Math.max(8,Math.min(r.left,window.innerWidth-228)),y:above?r.top-6:r.bottom+6,above});}}
       style={{...base,cursor:'pointer',borderBottom:'1px dotted var(--muted2)',whiteSpace:'nowrap'}}>{s.slice(0,12)}…</span>;
   }
 
@@ -2707,39 +2708,13 @@ function AccountManager({onBadgeRefresh}){
             {invMsg&&<div style={{marginTop:12,padding:12,background:'rgba(95,184,122,.1)',border:'1px solid rgba(95,184,122,.3)',borderRadius:8,fontSize:13,color:'var(--green)',lineHeight:1.5}}>{invMsg}</div>}
           </div>
         )}
-        {/* Pending activation */}
+        {/* Pending activation → button opens a popup */}
         {unregistered.length>0&&(
-          <div style={{marginBottom:24}}>
-            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,padding:'10px 14px',background:'rgba(224,82,82,.08)',border:'1px solid rgba(224,82,82,.25)',borderRadius:10}}>
-              <span style={{fontSize:16}}>⚠</span>
-              <div>
-                <div style={{fontSize:13,fontWeight:700,color:'var(--red)'}}>{unregistered.length} store{unregistered.length>1?'s':''} need Ops account activation</div>
-                <div style={{fontSize:11,color:'var(--muted)',marginTop:1}}>Enter email and approve to create login access</div>
-              </div>
-            </div>
-            {unregistered.map(s=>(
-              <div key={s.id} style={{background:'var(--panel)',border:'1px solid rgba(224,82,82,.2)',borderRadius:10,padding:16,marginBottom:10}}>
-                <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-                  <div style={{flex:1,minWidth:160}}>
-                    <div style={{fontSize:14,fontWeight:700}}>{s.store_name||s.name}</div>
-                    <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>{s.name} · {s.territory}</div>
-                  </div>
-                  <input value={emailInputs[s.id]||s.email||''} onChange={e=>setEmailInputs(ei=>({...ei,[s.id]:e.target.value}))}
-                    placeholder="franchisee@email.com" type="email"
-                    style={{flex:2,minWidth:200,background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'8px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:13,outline:'none'}}/>
-                  <button className="btn btn-primary btn-sm" disabled={busy===s.id||!(emailInputs[s.id]||s.email)} onClick={()=>approveStore(s)} style={{whiteSpace:'nowrap'}}>
-                    {busy===s.id?'Creating...':'Approve & Send Login →'}
-                  </button>
-                  <button className="btn btn-danger btn-sm" disabled={busy===s.id} onClick={()=>removePending(s)} style={{whiteSpace:'nowrap'}}>Delete</button>
-                </div>
-                {msgs[s.id]&&(
-                  <div style={{marginTop:8,fontSize:12,color:msgs[s.id].startsWith('✓')?'var(--green)':'var(--red)',padding:'10px 12px',background:msgs[s.id].startsWith('✓')?'rgba(95,184,122,.08)':'rgba(224,82,82,.08)',borderRadius:6,lineHeight:1.6,whiteSpace:'pre-wrap'}}>
-                    {msgs[s.id]}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <button onClick={()=>setShowPending(true)} className="btn btn-ghost"
+            style={{marginBottom:16,display:'inline-flex',alignItems:'center',gap:8,borderColor:'rgba(224,82,82,.35)',color:'var(--red)'}}>
+            ⚠ Stores pending approval
+            <span style={{background:'var(--red)',color:'#fff',fontSize:11,fontWeight:800,borderRadius:10,minWidth:20,height:20,display:'inline-flex',alignItems:'center',justifyContent:'center',padding:'0 6px'}}>{unregistered.length}</span>
+          </button>
         )}
 
         {/* Account list */}
@@ -2788,10 +2763,44 @@ function AccountManager({onBadgeRefresh}){
       </div>
       {pop&&(
         <div onClick={()=>setPop(null)} style={{position:'fixed',inset:0,zIndex:1200}}>
-          <div onClick={e=>e.stopPropagation()} style={{position:'fixed',left:pop.x,top:pop.y,maxWidth:220,background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'8px 12px',fontSize:13,color:'var(--text)',lineHeight:1.4,boxShadow:'0 8px 24px rgba(0,0,0,.5)'}}>{pop.text}</div>
+          <div onClick={e=>e.stopPropagation()} style={{position:'fixed',left:pop.x,top:pop.y,transform:pop.above?'translateY(-100%)':'none',maxWidth:220,maxHeight:'40vh',overflowY:'auto',background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'8px 12px',fontSize:13,color:'var(--text)',lineHeight:1.4,boxShadow:'0 8px 24px rgba(0,0,0,.5)'}}>{pop.text}</div>
         </div>
       )}
       {editMember&&<EditAccountModal member={editMember} stores={[]} onClose={()=>{setEditMember(null);load();}}/>}
+      {showPending&&(
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowPending(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <div className="modal-title">Stores pending approval</div>
+              <button className="close-btn" onClick={()=>setShowPending(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{fontSize:12,color:'var(--muted)',marginBottom:14}}>Enter an email and approve to create login access, or delete the pending store.</div>
+              {unregistered.length===0&&<div style={{color:'var(--muted)',fontSize:13,padding:'20px 0',textAlign:'center'}}>No stores pending approval.</div>}
+              {unregistered.map(s=>(
+                <div key={s.id} style={{background:'var(--panel2)',border:'1px solid rgba(224,82,82,.2)',borderRadius:10,padding:14,marginBottom:10}}>
+                  <div style={{fontSize:14,fontWeight:700}}>{s.store_name||s.name}</div>
+                  <div style={{fontSize:12,color:'var(--muted)',marginTop:2,marginBottom:10}}>{s.name} · {s.territory}</div>
+                  <input value={emailInputs[s.id]||s.email||''} onChange={e=>setEmailInputs(ei=>({...ei,[s.id]:e.target.value}))}
+                    placeholder="franchisee@email.com" type="email"
+                    style={{width:'100%',marginBottom:10,background:'var(--panel)',border:'1px solid var(--border2)',borderRadius:8,padding:'9px 12px',color:'var(--text)',fontFamily:'inherit',fontSize:14,outline:'none'}}/>
+                  <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                    <button className="btn btn-primary btn-sm" disabled={busy===s.id||!(emailInputs[s.id]||s.email)} onClick={()=>approveStore(s)} style={{whiteSpace:'nowrap'}}>
+                      {busy===s.id?'Creating...':'Approve & Send Login →'}
+                    </button>
+                    <button className="btn btn-danger btn-sm" disabled={busy===s.id} onClick={()=>removePending(s)} style={{whiteSpace:'nowrap'}}>Delete</button>
+                  </div>
+                  {msgs[s.id]&&(
+                    <div style={{marginTop:10,fontSize:12,color:msgs[s.id].startsWith('✓')?'var(--green)':'var(--red)',padding:'10px 12px',background:msgs[s.id].startsWith('✓')?'rgba(95,184,122,.08)':'rgba(224,82,82,.08)',borderRadius:6,lineHeight:1.6,whiteSpace:'pre-wrap'}}>
+                      {msgs[s.id]}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
