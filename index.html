@@ -143,6 +143,7 @@ body.modal-open{overflow:hidden;}
 .table-wrap table{width:100%;border-collapse:collapse;font-size:13px;}
 .table-wrap th{background:var(--panel2);padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);}
 .table-wrap td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.acct-table th,.acct-table td{white-space:nowrap;vertical-align:middle;}
 .table-wrap tr:last-child td{border-bottom:none;}
 .table-wrap tr:hover td{background:rgba(255,255,255,.02);}
 /* BADGE */
@@ -2540,6 +2541,8 @@ function AccountManager({onBadgeRefresh}){
   const [msgs,setMsgs]=useState({});
   const [emailInputs,setEmailInputs]=useState({});
   const [filterRole,setFilterRole]=useState('all');
+  const [acctSearch,setAcctSearch]=useState('');
+  const [pop,setPop]=useState(null);
   const [showInvite,setShowInvite]=useState(false);
   const [invForm,setInvForm]=useState({email:'',name:'',title:'COO'});
   const [invBusy,setInvBusy]=useState(false);
@@ -2656,7 +2659,18 @@ function AccountManager({onBadgeRefresh}){
     await sb.from('profiles').delete().eq('id',m.id);load();
   }
 
-  const filtered=accounts.filter(a=>filterRole==='all'||a.role===filterRole);
+  const q=acctSearch.trim().toLowerCase();
+  const filtered=accounts.filter(a=>filterRole==='all'||a.role===filterRole)
+    .filter(a=>!q||[a.full_name,a.name,a.store,a.title,a.role].some(v=>(v||'').toLowerCase().includes(q)));
+
+  // Render a cell that truncates past 12 chars and reveals the full value in a balloon on tap.
+  function cellTrunc(text,{bold,muted}={}){
+    const s=(text==null||text==='')?'—':String(text);
+    const base={fontWeight:bold?600:undefined,fontSize:muted?12:undefined,color:muted?'var(--muted)':undefined};
+    if(s.length<=12)return <span style={base}>{s}</span>;
+    return <span onClick={e=>{e.stopPropagation();const r=e.currentTarget.getBoundingClientRect();setPop({text:s,x:Math.max(8,Math.min(r.left,window.innerWidth-228)),y:r.bottom+6});}}
+      style={{...base,cursor:'pointer',borderBottom:'1px dotted var(--muted2)',whiteSpace:'nowrap'}}>{s.slice(0,12)}…</span>;
+  }
 
   return(
     <>
@@ -2729,7 +2743,9 @@ function AccountManager({onBadgeRefresh}){
         )}
 
         {/* Account list */}
-        <div style={{display:'flex',gap:8,marginBottom:16}}>
+        <input value={acctSearch} onChange={e=>setAcctSearch(e.target.value)} placeholder="Search name, store, role..."
+          style={{width:'100%',marginBottom:12,background:'var(--panel)',border:'1px solid var(--border2)',borderRadius:8,padding:'10px 14px',color:'var(--text)',fontFamily:'inherit',fontSize:14,outline:'none'}}/>
+        <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'center',flexWrap:'wrap'}}>
           {['franchisee','hq','all'].map(r=>(
             <button key={r} className={`btn btn-sm ${filterRole===r?'btn-primary':'btn-ghost'}`} onClick={()=>setFilterRole(r)}>
               {r==='franchisee'?'Franchisees':r==='hq'?'HQ Team':'All'}
@@ -2740,26 +2756,28 @@ function AccountManager({onBadgeRefresh}){
 
         {loading?<div className="loading">Loading...</div>:(
           <div className="table-wrap">
-            <table>
+            <table className="acct-table">
               <thead><tr><th>Name</th><th>Store</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
               <tbody>
-                {filtered.length===0&&<tr><td colSpan={5}><div className="empty"><div className="empty-title">No accounts yet</div></div></td></tr>}
+                {filtered.length===0&&<tr><td colSpan={5}><div className="empty"><div className="empty-title">No accounts found</div></div></td></tr>}
                 {filtered.map(m=>(
                   <tr key={m.id}>
-                    <td style={{fontWeight:600}}>{m.full_name||m.name||'—'}</td>
-                    <td style={{fontSize:12,color:'var(--muted)'}}>{m.store||'—'}</td>
+                    <td>{cellTrunc(m.full_name||m.name,{bold:true})}</td>
+                    <td>{cellTrunc(m.store,{muted:true})}</td>
                     <td>
                       <div style={{display:'flex',flexDirection:'column',gap:3}}>
-                        {m.title&&<span style={{fontSize:11,background:'rgba(95,184,122,.15)',color:'#5FB87A',padding:'2px 8px',borderRadius:4,fontWeight:700}}>{m.title}</span>}
+                        {m.title&&<span style={{fontSize:11,background:'rgba(95,184,122,.15)',color:'#5FB87A',padding:'2px 8px',borderRadius:4,fontWeight:700,whiteSpace:'nowrap'}}>{m.title}</span>}
                         <span style={{fontSize:10,color:'var(--muted)'}}>{m.role==='hq'?'HQ':'Franchisee'}</span>
                       </div>
                     </td>
                     <td><span className={`badge ${m.is_active!==false?'badge-green':'badge-red'}`}>{m.is_active!==false?'Active':'Inactive'}</span></td>
-                    <td style={{display:'flex',gap:6}}>
-                      <button className="btn btn-ghost btn-sm" onClick={()=>setEditMember(m)}>Edit</button>
-                      {m.role==='franchisee'&&<button className="btn btn-ghost btn-sm" onClick={()=>sendPasswordReset(m)}>Reset PW</button>}
-                      <button className="btn btn-ghost btn-sm" onClick={()=>toggleActive(m)}>{m.is_active!==false?'Deactivate':'Reactivate'}</button>
-                      <button className="btn btn-danger btn-sm" onClick={()=>deleteAccount(m)}>Delete</button>
+                    <td>
+                      <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                        <button className="btn btn-ghost btn-sm" onClick={()=>setEditMember(m)}>Edit</button>
+                        {m.role==='franchisee'&&<button className="btn btn-ghost btn-sm" onClick={()=>sendPasswordReset(m)}>Reset PW</button>}
+                        <button className="btn btn-ghost btn-sm" onClick={()=>toggleActive(m)}>{m.is_active!==false?'Deactivate':'Reactivate'}</button>
+                        <button className="btn btn-danger btn-sm" onClick={()=>deleteAccount(m)}>Delete</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -2768,6 +2786,11 @@ function AccountManager({onBadgeRefresh}){
           </div>
         )}
       </div>
+      {pop&&(
+        <div onClick={()=>setPop(null)} style={{position:'fixed',inset:0,zIndex:1200}}>
+          <div onClick={e=>e.stopPropagation()} style={{position:'fixed',left:pop.x,top:pop.y,maxWidth:220,background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,padding:'8px 12px',fontSize:13,color:'var(--text)',lineHeight:1.4,boxShadow:'0 8px 24px rgba(0,0,0,.5)'}}>{pop.text}</div>
+        </div>
+      )}
       {editMember&&<EditAccountModal member={editMember} stores={[]} onClose={()=>{setEditMember(null);load();}}/>}
     </>
   );
