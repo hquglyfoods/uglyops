@@ -192,12 +192,22 @@ body.modal-open{overflow:hidden;}
   .modal-footer .btn{flex:1;min-width:0;}
   .tab-bar{padding:0 16px;overflow-x:auto;}
   .filter-bar{gap:8px;}
-  /* tables scroll horizontally */
-  .table-wrap{overflow-x:auto;}
+  .filter-bar input,.filter-bar select{min-width:0!important;width:100%;flex:1 1 100%;}
+  /* keep every screen inside the viewport so content does not bleed off the right edge */
+  .main,.content{max-width:100%;overflow-x:hidden;}
+  .card,.modal-body{max-width:100%;}
+  /* tables scroll horizontally inside their own wrapper */
+  .table-wrap{overflow-x:auto;max-width:100%;}
   .table-wrap table{min-width:520px;}
-  /* stat cards / grids that use inline repeat(4) */
-  [style*="repeat(4,1fr)"]{grid-template-columns:repeat(2,1fr)!important;}
-  [style*="repeat(3,1fr)"]{grid-template-columns:1fr!important;}
+  /* inline column grids: collapse so they fit a phone instead of overflowing */
+  [style*="repeat(4,1fr)"],[style*="repeat(4, 1fr)"]{grid-template-columns:repeat(2,1fr)!important;}
+  [style*="repeat(3,1fr)"],[style*="repeat(3, 1fr)"]{grid-template-columns:1fr!important;}
+  [style*="repeat(5,1fr)"],[style*="repeat(6,1fr)"]{grid-template-columns:repeat(2,1fr)!important;}
+  [style*="minmax("]{grid-template-columns:1fr!important;}
+  /* let flex rows shrink/wrap their text instead of pushing it off-screen or squishing it
+     (buttons keep their natural width) */
+  .content [style*="display:flex"]>*:not(button):not(.btn),
+  .content [style*="display: flex"]>*:not(button):not(.btn){min-width:0;}
 }
 @media (max-width:420px){
   .card-grid-4{grid-template-columns:1fr;}
@@ -3271,6 +3281,7 @@ function ChangePassword({onDone}){
 // ── FRANCHISEE PORTAL ────────────────────────────────────
 function FranchiseePortal({session, profile}){
   const [portalView,setPortalView]=useState('tasks');
+  const [botOpen,setBotOpen]=useState(false);
   const [hqReplyCount,setHqReplyCount]=useState(0);
   const [taskCount,setTaskCount]=useState(0);
   const [announceCount,setAnnounceCount]=useState(0);
@@ -3341,7 +3352,7 @@ function FranchiseePortal({session, profile}){
         </div>
         <nav className="nav">
           {navItems.map(n=>(
-            <button key={n.key} className={`nav-item ${portalView===n.key?'active':''}`} onClick={()=>setPortalView(n.key)}>
+            <button key={n.key} className={`nav-item ${portalView===n.key?'active':''}`} onClick={()=>n.key==='bot'?setBotOpen(true):setPortalView(n.key)}>
               <span className="nav-icon" style={{fontSize:15,width:20,textAlign:'center'}}>{n.icon}</span>{n.label}
               {n.badge?<span className="nav-badge">{n.badge}</span>:null}
             </button>
@@ -3362,9 +3373,9 @@ function FranchiseePortal({session, profile}){
         {portalView==='announce'&&<FranchiseeAnnouncements profile={profile} onUpdate={refreshBadges}/>}
         {portalView==='contact'&&<ContactHQ profile={profile} storeName={storeName} onSeen={refreshBadges}/>}
         {portalView==='warnings'&&warningCount>0&&<FranchiseeWarnings profile={profile} storeName={storeName} onUpdate={refreshBadges}/>}
-        {portalView==='bot'&&<UglyBotPortal storeName={storeName}/>}
         {portalView==='password'&&<ChangePassword onDone={()=>setPortalView('tasks')}/>}
       </main>
+      {botOpen&&<UglyBotModal onClose={()=>setBotOpen(false)}/>}
     </div>
   );
 }
@@ -4143,14 +4154,13 @@ function FranchiseeAnnouncements({profile,onUpdate}){
 }
 
 // ── UGLYBOT PORTAL ────────────────────────────────────────
-function UglyBotPortal({storeName}){
-  const shellRef=React.useRef(null);
+function UglyBotModal({onClose}){
   const [src,setSrc]=React.useState(null);
-  // Embed the full UglyBot app (same one at uglybot.netlify.app) so the escalation
-  // flow, HQ Questions inbox, and learning loop all work exactly as built there.
-  // Both apps share the same Supabase project, so we hand the current session to the
-  // iframe via the URL hash; UglyBot's Supabase client (detectSessionInUrl) picks it
-  // up and signs the user in automatically, so there is no second login.
+  // Full-screen popup of the same UglyBot app (uglybot.netlify.app). Both apps share
+  // the same Supabase project, so we hand the current session to the iframe via the URL
+  // hash and the user is signed in automatically (no second login). Using the
+  // "modal-overlay" class lets the global scroll-lock also pin this to the visible
+  // viewport on mobile, so the bot's input stays above the keyboard.
   React.useEffect(()=>{
     (async()=>{
       let url='https://uglybot.netlify.app/';
@@ -4167,43 +4177,25 @@ function UglyBotPortal({storeName}){
           });
           url='https://uglybot.netlify.app/#'+p.toString();
         }
-      }catch(e){/* fall back to plain embed (manual login) */}
+      }catch(e){/* fall back to manual login */}
       setSrc(url);
     })();
   },[]);
-  // Size the iframe to fill from its top to the bottom of the visible viewport.
-  React.useEffect(()=>{
-    const vv=window.visualViewport;
-    const el=shellRef.current;
-    if(!el)return;
-    function fit(){
-      const vh=vv?vv.height:window.innerHeight;
-      const top=el.getBoundingClientRect().top;
-      el.style.height=Math.max(320,vh-top)+'px';
-    }
-    fit();
-    if(vv)vv.addEventListener('resize',fit);
-    window.addEventListener('resize',fit);
-    window.addEventListener('orientationchange',fit);
-    return ()=>{
-      if(vv)vv.removeEventListener('resize',fit);
-      window.removeEventListener('resize',fit);
-      window.removeEventListener('orientationchange',fit);
-      el.style.height='';
-    };
-  },[]);
   return(
-    <>
-      <div className="page-header">
-        <div><div className="page-title">UglyBot</div><div className="page-sub">AI assistant for operations, recipes, and support</div></div>
-        {src&&<a href={src} target="_blank" rel="noopener" className="btn btn-ghost btn-sm" style={{marginLeft:'auto'}}>Open in new tab ↗</a>}
+    <div className="modal-overlay" style={{background:'var(--bg)',padding:0,alignItems:'stretch',justifyContent:'flex-start',flexDirection:'column',zIndex:2000}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 16px',borderBottom:'1px solid var(--border)',background:'var(--panel)',flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <span style={{fontWeight:700,fontSize:15,color:'var(--text)'}}>UglyBot</span>
+          {src&&<a href={src} target="_blank" rel="noopener" style={{fontSize:12,color:'var(--muted)',textDecoration:'none'}}>Open in new tab ↗</a>}
+        </div>
+        <button onClick={onClose} aria-label="Close" style={{background:'var(--panel2)',border:'1px solid var(--border2)',borderRadius:8,color:'var(--text)',fontSize:14,fontWeight:600,lineHeight:1,cursor:'pointer',padding:'7px 14px',fontFamily:'inherit'}}>✕ Close</button>
       </div>
-      <div ref={shellRef} className="bot-shell" style={{padding:0}}>
-        {src&&<iframe src={src} title="UglyBot"
-          style={{width:'100%',height:'100%',border:'none',display:'block',background:'var(--bg)'}}
-          allow="clipboard-write; clipboard-read; camera; microphone"/>}
+      <div style={{flex:1,minHeight:0}}>
+        {src
+          ?<iframe src={src} title="UglyBot" style={{width:'100%',height:'100%',border:'none',display:'block',background:'var(--bg)'}} allow="clipboard-write; clipboard-read; camera; microphone"/>
+          :<div style={{padding:24,color:'var(--muted)',fontSize:14}}>Loading…</div>}
       </div>
-    </>
+    </div>
   );
 }
 
