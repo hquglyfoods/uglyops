@@ -189,6 +189,10 @@ body.modal-open{overflow:hidden;}
   .modal{max-width:100%!important;width:100%!important;max-height:100%!important;border-radius:16px 16px 0 0;}
   .modal-header{padding:16px;padding-top:calc(16px + env(safe-area-inset-top));}
   /* task wizard step indicator: drop the connector lines and allow wrap so it never cuts off */
+  /* store cards: stack vertically so the email never overlaps the ACTIVE badge or runs off-screen */
+  .store-card-row{flex-direction:column;align-items:flex-start!important;gap:8px;}
+  .store-card-contact{width:100%;justify-content:flex-start!important;}
+  .store-card-contact>div{text-align:left!important;}
   .wizard-steps{flex-wrap:wrap!important;gap:8px 14px!important;margin-bottom:18px!important;}
   .wizard-steps .wizard-conn{display:none!important;}
   .wizard-steps span{font-size:12px!important;}
@@ -346,31 +350,31 @@ function App(){
         setLinkError(decodeURIComponent(errMatch[1].replace(/\+/g,' ')));
       }
     }
-    sb.auth.getSession().then(async({data})=>{
-      setSession(data.session);
-      if(data.session){
-        const{data:p,error}=await sb.from('profiles').select('*').eq('id',data.session.user.id).maybeSingle();
-        // Only default to HQ if we successfully read and the row truly has no role.
-        // If the read failed, keep profile null so we don't accidentally grant HQ access.
+    let done=false;
+    const finish=()=>{ if(!done){ done=true; setLoading(false); } };
+    // Never get stuck on the loading screen (cold start / transient network on cross-app nav).
+    const watchdog=setTimeout(finish,8000);
+    const loadProfile=async(uid)=>{
+      try{
+        const{data:p,error}=await sb.from('profiles').select('*').eq('id',uid).maybeSingle();
         if(error){setProfile({role:'unknown',_loadError:true});}
         else if(p){setProfile(p);}
         else{setProfile({role:'hq'});} // no profile row = legacy HQ user
-      }
-      setLoading(false);
-    });
+      }catch(e){ setProfile({role:'unknown',_loadError:true}); }
+    };
+    sb.auth.getSession().then(async({data})=>{
+      setSession(data.session);
+      if(data.session){ await loadProfile(data.session.user.id); }
+    }).catch(()=>{/* session read failed → fall through to sign-in */})
+      .finally(()=>{ clearTimeout(watchdog); finish(); });
     const{data:{subscription}}=sb.auth.onAuthStateChange(async(event,s)=>{
       if(event==='PASSWORD_RECOVERY'){setRecoveryMode(true);}
       setSession(s);
-      if(s){
-        const{data:p,error}=await sb.from('profiles').select('*').eq('id',s.user.id).maybeSingle();
-        if(error){setProfile({role:'unknown',_loadError:true});}
-        else if(p){setProfile(p);}
-        else{setProfile({role:'hq'});}
-      }else{
-        setProfile(null);
-      }
+      if(s){ await loadProfile(s.user.id); }
+      else{ setProfile(null); }
+      finish(); // also unblocks if getSession was slow but auth resolved
     });
-    return()=>subscription.unsubscribe();
+    return()=>{ clearTimeout(watchdog); subscription.unsubscribe(); };
   },[]);
 
   if(loading)return<div className="loading">Loading...</div>;
@@ -576,6 +580,7 @@ function MainApp({view,setView,session}){
             <button onClick={()=>setView('password')}>Change Password</button>
             <button onClick={()=>sb.auth.signOut()} style={{color:'var(--red)'}}>Sign out</button>
           </div>
+          <div style={{marginTop:6,fontSize:10,color:'var(--muted2)'}}>build 2026-06-24-v4</div>
         </div>
       </aside>
       <main className="main">
@@ -1583,10 +1588,10 @@ function StoreList({setView}){
                         <div style={{position:'absolute',top:12,right:12}}>
                           <span style={{fontSize:10,fontWeight:700,background:'rgba(224,82,82,.15)',color:'var(--red)',padding:'3px 8px',borderRadius:4}}>NO ACCOUNT</span>
                         </div>
-                        <div style={{fontSize:15,fontWeight:700,marginBottom:2}}>{s.store_name||s.name}</div>
+                        <div style={{fontSize:15,fontWeight:700,marginBottom:2,paddingRight:96}}>{s.store_name||s.name}</div>
                         <div style={{fontSize:12,color:'var(--muted)',marginBottom:8}}>{s.store_name&&<span style={{marginRight:6}}>{s.name} ·</span>}{s.territory}</div>
-                        <div style={{display:'flex',gap:10,alignItems:'center'}}>
-                          {s.email&&<a href={`mailto:${s.email}`} onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'var(--blue)',textDecoration:'none'}}>✉ {s.email}</a>}
+                        <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                          {s.email&&<a href={`mailto:${s.email}`} onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'var(--blue)',textDecoration:'none',wordBreak:'break-all'}}>✉ {s.email}</a>}
                           {s.phone&&<a href={`tel:${s.phone}`} onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'var(--green)',textDecoration:'none'}}>📞 {s.phone}</a>}
                           {submitted>0&&<span style={{fontSize:12,color:'var(--gold)',fontWeight:600,marginLeft:'auto'}}>{submitted} pending</span>}
                         </div>
@@ -1613,21 +1618,15 @@ function StoreList({setView}){
                         onClick={()=>setSelected(s)}
                         onMouseEnter={e=>e.currentTarget.style.borderColor='var(--orange)'}
                         onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
-                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                          <div>
-                            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:2}}>
-                              <div style={{fontSize:15,fontWeight:700}}>{s.store_name||s.name}</div>
-                              <span style={{fontSize:10,fontWeight:700,background:'rgba(95,184,122,.15)',color:'var(--green)',padding:'2px 6px',borderRadius:4}}>✓ ACTIVE</span>
-                            </div>
-                            <div style={{fontSize:12,color:'var(--muted)'}}>{s.store_name&&<span style={{marginRight:6}}>{s.name} ·</span>}{s.territory}</div>
-                          </div>
-                          <div style={{display:'flex',gap:16,alignItems:'center'}}>
-                            {submitted>0&&<span style={{fontSize:12,color:'var(--gold)',fontWeight:600}}>{submitted} pending</span>}
-                            <div style={{textAlign:'right'}}>
-                              {s.email&&<a href={`mailto:${s.email}`} onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'var(--blue)',textDecoration:'none',display:'block'}}>✉ {s.email}</a>}
-                              {s.phone&&<a href={`tel:${s.phone}`} onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'var(--green)',textDecoration:'none',marginTop:2,display:'block'}}>📞 {s.phone}</a>}
-                            </div>
-                          </div>
+                        <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',marginBottom:4}}>
+                          <div style={{fontSize:15,fontWeight:700}}>{s.store_name||s.name}</div>
+                          <span style={{fontSize:10,fontWeight:700,background:'rgba(95,184,122,.15)',color:'var(--green)',padding:'2px 6px',borderRadius:4,flexShrink:0,whiteSpace:'nowrap'}}>✓ ACTIVE</span>
+                          {submitted>0&&<span style={{fontSize:12,color:'var(--gold)',fontWeight:600,marginLeft:'auto'}}>{submitted} pending</span>}
+                        </div>
+                        <div style={{fontSize:12,color:'var(--muted)',marginBottom:8}}>{s.store_name&&<span style={{marginRight:6}}>{s.name} ·</span>}{s.territory}</div>
+                        <div style={{display:'flex',gap:16,flexWrap:'wrap',fontSize:12}}>
+                          {s.email&&<a href={`mailto:${s.email}`} onClick={e=>e.stopPropagation()} style={{color:'var(--blue)',textDecoration:'none',wordBreak:'break-all'}}>✉ {s.email}</a>}
+                          {s.phone&&<a href={`tel:${s.phone}`} onClick={e=>e.stopPropagation()} style={{color:'var(--green)',textDecoration:'none'}}>📞 {s.phone}</a>}
                         </div>
                       </div>
                     );
