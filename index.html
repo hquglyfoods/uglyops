@@ -3298,11 +3298,12 @@ function FranchiseePortal({session, profile}){
     setAnnounceCount(unconfirmed);
     // Warning history: My Standing tab only appears if this store has ever received a warning.
     // Tab visibility = ever received (warningCount). Nav badge = active warnings in last 12 months.
-    const{data:wRows}=await sb.from('ops_warnings').select('status,issued_at').eq('franchisee_id',frId);
+    const{data:wRows}=await sb.from('ops_warnings').select('status,issued_at,franchisee_seen_status').eq('franchisee_id',frId);
     const allW=wRows||[];
     setWarningCount(allW.length);
-    const warnYearAgo=Date.now()-365*24*60*60*1000;
-    setActiveWarningCount(allW.filter(w=>w.status!=='rescinded'&&new Date(w.issued_at).getTime()>=warnYearAgo).length);
+    // Nav badge acts as a notification: count warnings the franchisee hasn't seen at
+    // their current status (newly issued, or status changed by HQ e.g. registered/rescinded).
+    setActiveWarningCount(allW.filter(w=>(w.franchisee_seen_status||null)!==w.status).length);
   },[resolveFrId]);
 
   useEffect(()=>{
@@ -3353,7 +3354,7 @@ function FranchiseePortal({session, profile}){
         {portalView==='tasks'&&<FranchiseeTasks profile={profile} onUpdate={refreshBadges}/>}
         {portalView==='announce'&&<FranchiseeAnnouncements profile={profile} onUpdate={refreshBadges}/>}
         {portalView==='contact'&&<ContactHQ profile={profile} storeName={storeName} onSeen={refreshBadges}/>}
-        {portalView==='warnings'&&warningCount>0&&<FranchiseeWarnings profile={profile} storeName={storeName}/>}
+        {portalView==='warnings'&&warningCount>0&&<FranchiseeWarnings profile={profile} storeName={storeName} onUpdate={refreshBadges}/>}
         {portalView==='bot'&&<UglyBotPortal storeName={storeName}/>}
         {portalView==='password'&&<ChangePassword onDone={()=>setPortalView('tasks')}/>}
       </main>
@@ -3575,7 +3576,7 @@ function FranchiseeThreadModal({message,profile,storeName,onClose,onSeen}){
 }
 
 // ── FRANCHISEE WARNINGS (own standing) ────────────────────
-function FranchiseeWarnings({profile,storeName}){
+function FranchiseeWarnings({profile,storeName,onUpdate}){
   const [warnings,setWarnings]=useState([]);
   const [loading,setLoading]=useState(true);
   const [selected,setSelected]=useState(null);
@@ -3586,6 +3587,10 @@ function FranchiseeWarnings({profile,storeName}){
     if(frId){
       const{data}=await sb.from('ops_warnings').select('*').eq('franchisee_id',frId).order('issued_at',{ascending:false});
       setWarnings(data||[]);
+      // Viewing My Standing marks every warning as seen at its current status, which
+      // clears the notification badge. Status changes by HQ re-trigger it next time.
+      try{await sb.rpc('mark_my_warnings_seen');}catch(e){}
+      if(onUpdate)onUpdate();
     }
     setLoading(false);
   }
@@ -4244,15 +4249,42 @@ function UglyBotPortal({storeName}){
 }
 
 
-// Background scroll lock while a modal is open, plus (on mobile) pin each modal
-// overlay to the visible viewport so its input stays above the on-screen keyboard.
+// Background scroll lock while a modal is open. On mobile we use the position:fixed
+// body technique (overflow:hidden alone does NOT stop scrolling on iOS Safari), and
+// pin each overlay to the visible viewport so its input stays above the keyboard.
 (function(){
   const vv=window.visualViewport;
-  let scheduled=false;
+  let scheduled=false,locked=false,savedY=0;
+  function setLock(on){
+    const mobile=window.innerWidth<=768;
+    if(on&&!locked){
+      document.body.classList.add('modal-open');
+      if(mobile){
+        savedY=window.scrollY||window.pageYOffset||0;
+        document.body.style.position='fixed';
+        document.body.style.top=`-${savedY}px`;
+        document.body.style.left='0';
+        document.body.style.right='0';
+        document.body.style.width='100%';
+      }
+      locked=true;
+    }else if(!on&&locked){
+      document.body.classList.remove('modal-open');
+      if(document.body.style.position==='fixed'){
+        document.body.style.position='';
+        document.body.style.top='';
+        document.body.style.left='';
+        document.body.style.right='';
+        document.body.style.width='';
+        window.scrollTo(0,savedY);
+      }
+      locked=false;
+    }
+  }
   function apply(){
     scheduled=false;
     const overlays=document.querySelectorAll('.modal-overlay');
-    document.body.classList.toggle('modal-open',overlays.length>0);
+    setLock(overlays.length>0);
     const mobile=window.innerWidth<=768;
     overlays.forEach(o=>{
       if(mobile&&vv){o.style.height=vv.height+'px';o.style.top=vv.offsetTop+'px';o.style.bottom='auto';}
