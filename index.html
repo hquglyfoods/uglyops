@@ -636,7 +636,7 @@ function InstallBanner(){
 
 
 // Copies the mobile install deep-link (login screen auto-opens the install guide).
-function CopyInstallLinkBtn(){
+function CopyInstallLinkBtn({label}){
   const [ok,setOk]=React.useState(false);
   const link='https://uglyops.netlify.app/#install';
   async function copy(){
@@ -645,7 +645,7 @@ function CopyInstallLinkBtn(){
     }
     setOk(true);setTimeout(()=>setOk(false),2000);
   }
-  return <button type="button" className="btn btn-ghost btn-sm" onClick={copy} style={{whiteSpace:'nowrap'}}>{ok?'✓ Copied':'Copy install link'}</button>;
+  return <button type="button" className="btn btn-ghost btn-sm" onClick={copy} style={{whiteSpace:'nowrap'}}>{ok?'✓ Copied':(label||'Copy install link')}</button>;
 }
 
 function AuthScreen(){
@@ -2886,11 +2886,13 @@ function AccountManager({onBadgeRefresh}){
         {/* Pending activation → button opens a popup */}
         {unregistered.length>0&&(
           <button onClick={()=>setShowPending(true)} className="btn btn-ghost"
-            style={{marginBottom:16,display:'inline-flex',alignItems:'center',gap:8,borderColor:'rgba(224,82,82,.35)',color:'var(--red)'}}>
+            style={{marginBottom:16,marginRight:8,display:'inline-flex',alignItems:'center',gap:8,borderColor:'rgba(224,82,82,.35)',color:'var(--red)'}}>
             ⚠ Stores pending approval
             <span style={{background:'var(--red)',color:'#fff',fontSize:11,fontWeight:800,borderRadius:10,minWidth:20,height:20,display:'inline-flex',alignItems:'center',justifyContent:'center',padding:'0 6px'}}>{unregistered.length}</span>
           </button>
         )}
+        {/* Mobile app install link: copy & send to any user */}
+        <div style={{marginBottom:16,display:'inline-flex'}}><CopyInstallLinkBtn label="📲 App install link"/></div>
 
         {/* Account list */}
         <input value={acctSearch} onChange={e=>setAcctSearch(e.target.value)} placeholder="Search name, store, role..."
