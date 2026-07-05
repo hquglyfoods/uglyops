@@ -349,10 +349,10 @@ function PwaCards({profile}){
       </div>
       <div className="card" style={{padding:16}}>
         <div style={{fontWeight:600,marginBottom:6}}>Notifications</div>
-        {typeof Notification==='undefined'||!('serviceWorker'in navigator)
-          ?<div style={{fontSize:13,color:'var(--muted)'}}>This browser does not support push notifications.</div>
-          :iosBlocked
-            ?<div style={{fontSize:13,color:'var(--muted)'}}>On iPhone/iPad, first install the app to your Home Screen (card above), then open it and enable notifications here.</div>
+        {iosBlocked
+          ?<div style={{fontSize:13,color:'var(--muted)'}}>On iPhone/iPad, first install the app to your Home Screen (card above), then open it from the Home Screen and the "Enable notifications" button will appear here.</div>
+          :typeof Notification==='undefined'||!('serviceWorker'in navigator)
+            ?<div style={{fontSize:13,color:'var(--muted)'}}>This browser does not support push notifications.</div>
             :perm==='denied'
               ?<div style={{fontSize:13,color:'var(--muted)'}}>Notifications are blocked for this app. Allow them in your device/browser settings, then come back.</div>
               :subOn
