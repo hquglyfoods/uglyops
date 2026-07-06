@@ -103,6 +103,24 @@ async function fanout(subs, payloadFor) {
   return results.filter(x => x.status === 'fulfilled' && x.value && x.value.ok).length;
 }
 
+// Persist a notification so the in-app bell can show a history.
+// audience: { role:'hq' } for all HQ, { franchisee_id } for one store,
+//           { titles:[...] } for specific C-levels (stored as a comma list).
+async function logNotif(audience, n) {
+  try {
+    const row = {
+      title: (n.title || '').slice(0, 160),
+      body: (n.body || '').slice(0, 400),
+      url: (n.data && n.data.url) || null,
+      tag: n.tag || null,
+      audience_role: audience.role || (audience.franchisee_id ? 'franchisee' : 'hq'),
+      franchisee_id: audience.franchisee_id || null,
+      titles: audience.titles && audience.titles.length ? audience.titles.join(',') : null,
+    };
+    await rest('notifications', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(row) });
+  } catch (e) { /* logging must never break push */ }
+}
+
 exports.handler = async (event) => {
   const key = (event.queryStringParameters || {}).key;
   if (!WEBHOOK_SECRET || key !== WEBHOOK_SECRET) {
@@ -127,6 +145,7 @@ exports.handler = async (event) => {
       sent = await fanout(subs, async () => ({
         title: 'New task assigned', body: title, tag: 'task-' + record.id, badge, data: { url: '/#open=tasks' },
       }));
+      await logNotif({ franchisee_id: record.franchisee_id }, { title: 'New task assigned', body: title, tag: 'task-' + record.id, data: { url: '/#open=tasks' } });
     }
 
     // 6) Proof submitted (status changed to submitted) -> all HQ
@@ -143,6 +162,7 @@ exports.handler = async (event) => {
       sent = await fanout(subs, async () => ({
         title: 'Submitted for review', body: `${store}: ${title}`, tag: 'review-' + record.id, badge, data: { url: '/#open=review&id=' + record.id },
       }));
+      await logNotif({ role: 'hq' }, { title: 'Submitted for review', body: `${store}: ${title}`, tag: 'review-' + record.id, data: { url: '/#open=review&id=' + record.id } });
     }
 
     // 2) New announcement published -> all franchisee devices
@@ -152,6 +172,7 @@ exports.handler = async (event) => {
         title: 'New announcement', body: record.title || '', tag: 'ann-' + record.id, data: { url: '/#open=announce' },
         badge: s.franchisee_id ? await frBadge(s.franchisee_id) : undefined,
       }));
+      await logNotif({ role: 'franchisee' }, { title: 'New announcement', body: record.title || '', tag: 'ann-' + record.id, data: { url: '/#open=announce' } });
     }
 
     // 5) Franchisee sends a new message -> all HQ
@@ -162,6 +183,7 @@ exports.handler = async (event) => {
         title: `Message from ${record.store_name || 'a store'}`,
         body: record.subject || record.topic || '', tag: 'msg-' + record.id, badge, data: { url: '/#open=messages' },
       }));
+      await logNotif({ role: 'hq' }, { title: `Message from ${record.store_name || 'a store'}`, body: record.subject || record.topic || '', tag: 'msg-' + record.id, data: { url: '/#open=messages' } });
     }
 
     // 3) Reply on a message thread -> the other side
@@ -175,12 +197,14 @@ exports.handler = async (event) => {
           sent = await fanout(subs, async () => ({
             title: 'HQ replied', body: msg.subject || '', tag: 'reply-' + record.message_id, badge, data: { url: '/#open=contact' },
           }));
+          await logNotif({ franchisee_id: msg.franchisee_id }, { title: 'HQ replied', body: msg.subject || '', tag: 'reply-' + record.message_id, data: { url: '/#open=contact' } });
         } else {
           const subs = await subsForHQ();
           const badge = await hqBadge();
           sent = await fanout(subs, async () => ({
             title: `Reply from ${msg.store_name || 'a store'}`, body: msg.subject || '', tag: 'reply-' + record.message_id, badge, data: { url: '/#open=messages' },
           }));
+          await logNotif({ role: 'hq' }, { title: `Reply from ${msg.store_name || 'a store'}`, body: msg.subject || '', tag: 'reply-' + record.message_id, data: { url: '/#open=messages' } });
         }
       }
     }
@@ -195,6 +219,7 @@ exports.handler = async (event) => {
         body: [record.category, reason].filter(Boolean).join(': ') || 'Please review and respond in the portal.',
         tag: 'warn-' + record.id, badge, data: { url: '/#open=warnings' },
       }));
+      await logNotif({ franchisee_id: record.franchisee_id }, { title: 'Warning issued by HQ', body: [record.category, reason].filter(Boolean).join(': ') || 'Please review and respond in the portal.', tag: 'warn-' + record.id, data: { url: '/#open=warnings' } });
     }
     // Franchisee advanced into a new phase → notify the C-levels who own tasks in that phase.
     else if (table === 'franchisees' && type === 'UPDATE'
@@ -214,6 +239,7 @@ exports.handler = async (event) => {
           tag: 'phase-' + record.id + '-' + record.current_phase_id,
           data: { url: '/os.html#open=board' },
         }));
+        await logNotif({ role: 'hq', titles: owners }, { title: `Now in ${phaseName}`, body: `${frName} entered ${phaseName}. Your team owns tasks in this phase.`, tag: 'phase-' + record.id + '-' + record.current_phase_id, data: { url: '/os.html#open=board' } });
       }
     }
   } catch (e) {
