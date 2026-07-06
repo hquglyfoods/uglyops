@@ -332,9 +332,11 @@ body.modal-open{overflow:hidden;}
   .card-grid-2{grid-template-columns:1fr;gap:12px;}
   .form-row{grid-template-columns:1fr;}
   .card{padding:16px!important;}
-  .modal-overlay{padding:0;align-items:flex-end;}
-  .modal{max-width:100%!important;width:100%!important;max-height:100%!important;border-radius:16px 16px 0 0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+  .modal-overlay{padding:14px;align-items:center;}
+  .modal{max-width:100%!important;width:100%!important;max-height:88vh!important;border-radius:16px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
   .modal-overlay{overflow:hidden;touch-action:none;}
+  /* UglyBot stays full-screen, not a centered card */
+  .modal-overlay.bot-modal{padding:0;align-items:stretch;}
   .modal{touch-action:pan-y;}
   .modal-header{padding:16px;padding-top:calc(16px + env(safe-area-inset-top));}
   /* task wizard step indicator: drop the connector lines and allow wrap so it never cuts off */
