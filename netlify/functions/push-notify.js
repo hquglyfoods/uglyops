@@ -68,6 +68,30 @@ async function subsForFranchisee(frId) {
 async function subsForAllFranchisees() {
   return restJson(`push_subscriptions?role=neq.hq&select=endpoint,subscription,franchisee_id`);
 }
+// HQ subscriptions whose owning profile has one of the given C-level titles (CEO/COO/...).
+// push_subscriptions has user_id; profiles has title. We join in two cheap queries.
+async function subsForHQTitles(titles) {
+  if (!titles || !titles.length) return [];
+  // 1) HQ profiles matching those titles
+  const inList = titles.map(t => encodeURIComponent(t)).join(',');
+  const profs = await restJson(`profiles?role=eq.hq&title=in.(${inList})&select=id,title`);
+  if (!profs.length) return [];
+  const idInList = profs.map(p => p.id).join(',');
+  // 2) their push subscriptions
+  const subs = await restJson(`push_subscriptions?role=eq.hq&user_id=in.(${idInList})&select=endpoint,subscription,user_id`);
+  return subs;
+}
+// Distinct task owners (titles) configured for a phase.
+async function ownersForPhase(phaseId) {
+  if (!phaseId) return [];
+  const rows = await restJson(`phase_tasks?phase_id=eq.${phaseId}&select=owner`);
+  const set = new Set();
+  for (const r of rows) {
+    const o = (r.owner || '').trim();
+    if (o && o.toUpperCase() !== 'HQ' && o.toUpperCase() !== 'FRANCHISEE') set.add(o);
+  }
+  return Array.from(set);
+}
 
 async function fanout(subs, payloadFor) {
   const results = await Promise.allSettled(subs.map(async s => {
@@ -171,6 +195,26 @@ exports.handler = async (event) => {
         body: [record.category, reason].filter(Boolean).join(': ') || 'Please review and respond in the portal.',
         tag: 'warn-' + record.id, badge, data: { url: '/#open=warnings' },
       }));
+    }
+    // Franchisee advanced into a new phase → notify the C-levels who own tasks in that phase.
+    else if (table === 'franchisees' && type === 'UPDATE'
+             && record.current_phase_id
+             && (!old_record || old_record.current_phase_id !== record.current_phase_id)) {
+      const owners = await ownersForPhase(record.current_phase_id);
+      const subs = await subsForHQTitles(owners);
+      if (subs.length) {
+        const [phaseRows, frName] = [
+          await restJson(`phases?id=eq.${record.current_phase_id}&select=name`),
+          record.store_name || record.name || 'A franchisee',
+        ];
+        const phaseName = (phaseRows[0] && phaseRows[0].name) || 'a new phase';
+        sent = await fanout(subs, async () => ({
+          title: `Now in ${phaseName}`,
+          body: `${frName} entered ${phaseName}. Your team owns tasks in this phase.`,
+          tag: 'phase-' + record.id + '-' + record.current_phase_id,
+          data: { url: '/os.html#open=board' },
+        }));
+      }
     }
   } catch (e) {
     return { statusCode: 200, body: JSON.stringify({ ok: false, error: String(e && e.message || e) }) };
