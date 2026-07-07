@@ -8,7 +8,9 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 const VAPID = {
   publicKey: process.env.VAPID_PUBLIC_KEY,
-  privatePem: (process.env.VAPID_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
+  // Pass the raw env var; lib/push normalizePrivateKey handles all 3 formats
+  // (base64 PEM / escaped \n / real newlines).
+  privatePem: process.env.VAPID_PRIVATE_KEY || '',
   subject: 'mailto:do-not-reply@uglydonuts-franchiseportal.com',
 };
 
@@ -122,8 +124,12 @@ async function logNotif(audience, n) {
 }
 
 exports.handler = async (event) => {
-  const key = (event.queryStringParameters || {}).key;
-  if (!WEBHOOK_SECRET || key !== WEBHOOK_SECRET) {
+  // Defensive key parse: strip surrounding angle brackets (leftover placeholder
+  // "<SECRET>") and whitespace so a mis-pasted webhook URL still authenticates.
+  const key = ((event.queryStringParameters || {}).key || '').trim().replace(/^[<]+|[>]+$/g, '');
+  const secret = (WEBHOOK_SECRET || '').trim();
+  if (!secret || key !== secret) {
+    console.log('WEBHOOK AUTH FAIL', { hasSecret: !!secret, keyLen: key.length });
     return { statusCode: 401, body: JSON.stringify({ error: 'unauthorized' }) };
   }
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method Not Allowed' };
@@ -131,13 +137,16 @@ exports.handler = async (event) => {
   let hook = {};
   try { hook = JSON.parse(event.body || '{}'); } catch (e) {}
   const { type, table, record, old_record } = hook;
+  console.log('WEBHOOK IN', { table, type, keys: record ? Object.keys(record) : [] });
   if (!table || !record) return { statusCode: 400, body: JSON.stringify({ error: 'bad payload' }) };
 
   let sent = 0;
+  let matched = null;   // which branch handled this event (for diagnostics)
 
   try {
     // 1) New task assigned -> that franchisee
     if (table === 'ops_assignments' && type === 'INSERT') {
+      matched = 'task_assigned';
       const subs = await subsForFranchisee(record.franchisee_id);
       const badge = await frBadge(record.franchisee_id);
       const tasks = await restJson(`ops_tasks?id=eq.${record.ops_task_id}&select=title`);
@@ -151,6 +160,7 @@ exports.handler = async (event) => {
     // 6) Proof submitted (status changed to submitted) -> all HQ
     else if (table === 'ops_assignments' && type === 'UPDATE'
              && record.status === 'submitted' && (!old_record || old_record.status !== 'submitted')) {
+      matched = 'task_submitted';
       const subs = await subsForHQ();
       const badge = await hqBadge();
       const [frs, tasks] = await Promise.all([
@@ -167,6 +177,7 @@ exports.handler = async (event) => {
 
     // 2) New announcement published -> all franchisee devices
     else if (table === 'ops_announcements' && type === 'INSERT' && record.status === 'active') {
+      matched = 'announcement';
       const subs = await subsForAllFranchisees();
       sent = await fanout(subs, async (s) => ({
         title: 'New announcement', body: record.title || '', tag: 'ann-' + record.id, data: { url: '/#open=announce' },
@@ -177,6 +188,7 @@ exports.handler = async (event) => {
 
     // 5) Franchisee sends a new message -> all HQ
     else if (table === 'ops_messages' && type === 'INSERT') {
+      matched = 'message';
       const subs = await subsForHQ();
       const badge = await hqBadge();
       sent = await fanout(subs, async () => ({
@@ -188,6 +200,7 @@ exports.handler = async (event) => {
 
     // 3) Reply on a message thread -> the other side
     else if (table === 'ops_message_replies' && type === 'INSERT') {
+      matched = 'message_reply';
       const msgs = await restJson(`ops_messages?id=eq.${record.message_id}&select=franchisee_id,subject,store_name`);
       const msg = msgs[0];
       if (msg) {
@@ -211,6 +224,7 @@ exports.handler = async (event) => {
 
     // 4) Warning issued -> that franchisee
     else if (table === 'ops_warnings' && type === 'INSERT') {
+      matched = 'warning';
       const subs = await subsForFranchisee(record.franchisee_id);
       const badge = await frBadge(record.franchisee_id);
       const reason = (record.reason || '').slice(0, 90);
@@ -227,6 +241,7 @@ exports.handler = async (event) => {
              && (!old_record || old_record.current_phase_id !== record.current_phase_id)) {
       const owners = await ownersForPhase(record.current_phase_id);
       const subs = await subsForHQTitles(owners);
+      matched = 'phase_change';
       if (subs.length) {
         const [phaseRows, frName] = [
           await restJson(`phases?id=eq.${record.current_phase_id}&select=name`),
@@ -246,5 +261,10 @@ exports.handler = async (event) => {
     return { statusCode: 200, body: JSON.stringify({ ok: false, error: String(e && e.message || e) }) };
   }
 
-  return { statusCode: 200, body: JSON.stringify({ ok: true, sent }) };
+  if (!matched) {
+    console.log('WEBHOOK NO MATCH', { table, type });
+    return { statusCode: 200, body: JSON.stringify({ ok: true, sent: 0, matched: null, reason: 'no handler for this table/type/condition', table, type }) };
+  }
+  console.log('WEBHOOK HANDLED', { matched, sent });
+  return { statusCode: 200, body: JSON.stringify({ ok: true, sent, matched }) };
 };

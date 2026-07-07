@@ -4,6 +4,39 @@ const crypto = require('crypto');
 
 function b64u(buf) { return Buffer.from(buf).toString('base64url'); }
 
+// Normalize a VAPID private key from ANY of three env-var formats into a PEM
+// string that crypto.createPrivateKey / createSign can read:
+//   (1) base64-encoded PEM on a single line (no "BEGIN" visible until decoded)
+//   (2) PEM with literal "\n" escape sequences instead of real newlines
+//   (3) a real multi-line PEM
+// Returns the PEM string. Throws only if the result is empty.
+function normalizePrivateKey(raw) {
+  let pem = raw || '';
+  // (1) If it doesn't contain BEGIN, it may be base64-wrapped PEM. Try to decode.
+  if (!pem.includes('BEGIN')) {
+    try {
+      const decoded = Buffer.from(pem, 'base64').toString('utf8');
+      if (decoded.includes('BEGIN')) pem = decoded;
+    } catch (_) { /* leave as-is */ }
+  }
+  // (2) Turn escaped "\n" into real newlines.
+  pem = pem.replace(/\\n/g, '\n').trim();
+  return pem;
+}
+
+// Validate that a normalized PEM loads as an EC private key. Returns
+// {ok:true, type} or {ok:false, error} without throwing.
+function checkPrivateKey(raw) {
+  try {
+    const pem = normalizePrivateKey(raw);
+    if (!pem) return { ok: false, error: 'empty' };
+    const key = crypto.createPrivateKey(pem);
+    return { ok: key.asymmetricKeyType === 'ec', type: key.asymmetricKeyType };
+  } catch (e) {
+    return { ok: false, error: String((e && e.message) || e) };
+  }
+}
+
 // ---- VAPID ES256 JWT ----
 // createSign returns a DER-encoded ECDSA signature; JOSE needs raw r||s (64 bytes).
 function derToJose(der) {
@@ -32,7 +65,7 @@ function vapidJwt(audience, subject, privatePem, publicB64u) {
   }));
   const signer = crypto.createSign('SHA256');
   signer.update(header + '.' + payload);
-  const der = signer.sign(privatePem);
+  const der = signer.sign(normalizePrivateKey(privatePem));
   return header + '.' + payload + '.' + b64u(derToJose(der));
 }
 
@@ -103,4 +136,4 @@ async function sendPush(subscription, payloadObj, vapid) {
   return { ok: false, status: res.status, text: await res.text().catch(() => '') };
 }
 
-module.exports = { sendPush };
+module.exports = { sendPush, normalizePrivateKey, checkPrivateKey };
