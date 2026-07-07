@@ -235,6 +235,18 @@ exports.handler = async (event) => {
       }));
       await logNotif({ franchisee_id: record.franchisee_id }, { title: 'Warning issued by HQ', body: [record.category, reason].filter(Boolean).join(': ') || 'Please review and respond in the portal.', tag: 'warn-' + record.id, data: { url: '/#open=warnings' } });
     }
+    // High-severity error report -> notify HQ so silent failures surface fast.
+    else if (table === 'error_reports' && type === 'INSERT' && record.severity === 'high') {
+      matched = 'error_report';
+      const subs = await subsForHQ();
+      const who = record.store_name ? `${record.store_name}` : (record.role || 'a user');
+      sent = await fanout(subs, async () => ({
+        title: 'App error reported',
+        body: `${record.context || 'error'}: ${(record.message || '').slice(0, 80)} (${who})`,
+        tag: 'err-' + record.id, data: { url: '/#open=password' },
+      }));
+      await logNotif({ role: 'hq' }, { title: 'App error reported', body: `${record.context || 'error'} (${who})`, tag: 'err-' + record.id, data: { url: '/#open=password' } });
+    }
     // Franchisee advanced into a new phase → notify the C-levels who own tasks in that phase.
     else if (table === 'franchisees' && type === 'UPDATE'
              && record.current_phase_id
