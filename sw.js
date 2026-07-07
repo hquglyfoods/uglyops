@@ -33,7 +33,9 @@ self.addEventListener('notificationclick', e => {
       for (const c of list) {
         if ('focus' in c) {
           c.focus();
-          if ('navigate' in c && url !== '/') return c.navigate(url).catch(()=>{});
+          // Always navigate (even to '/') so a backgrounded window reloads the
+          // latest build instead of showing a stale one.
+          if ('navigate' in c) return c.navigate(url).catch(()=>{});
           return;
         }
       }
