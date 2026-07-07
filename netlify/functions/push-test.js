@@ -22,6 +22,71 @@ async function restJson(path) {
   return res.json();
 }
 
+// PATCH a row and return the updated representation.
+async function restPatch(path, body) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}`,
+      'Content-Type': 'application/json', Prefer: 'return=representation',
+    },
+    body: JSON.stringify(body),
+  });
+  const ok = res.ok;
+  let data = [];
+  try { data = await res.json(); } catch (e) {}
+  return { ok, status: res.status, data };
+}
+
+// Fire a real webhook by briefly changing an existing row, then restore it.
+// Returns what was toggled so the UI can show it. Restoration is guaranteed
+// via finally, even if the intermediate step throws.
+async function simulateEvent(kind) {
+  if (kind === 'task_submitted') {
+    // Pick any existing assignment; flip status to 'submitted' then restore.
+    const rows = await restJson(`ops_assignments?select=id,status&limit=1`);
+    if (!rows.length) return { ok: false, reason: 'No ops_assignments rows exist to test with.' };
+    const row = rows[0];
+    const original = row.status;
+    if (original === 'submitted') {
+      // Already submitted: toggle to 'active' first so the change is real.
+      try {
+        await restPatch(`ops_assignments?id=eq.${row.id}`, { status: 'active' });
+        await new Promise(r => setTimeout(r, 400));
+        const up = await restPatch(`ops_assignments?id=eq.${row.id}`, { status: 'submitted' });
+        return { ok: up.ok, fired: 'ops_assignments UPDATE -> submitted', rowId: row.id, restored: true };
+      } finally {
+        await restPatch(`ops_assignments?id=eq.${row.id}`, { status: original });
+      }
+    }
+    try {
+      const up = await restPatch(`ops_assignments?id=eq.${row.id}`, { status: 'submitted' });
+      return { ok: up.ok, fired: 'ops_assignments UPDATE -> submitted', rowId: row.id, restoredTo: original };
+    } finally {
+      await restPatch(`ops_assignments?id=eq.${row.id}`, { status: original });
+    }
+  }
+
+  if (kind === 'phase_change') {
+    // Pick a franchisee with a phase; bump current_phase_id to another phase then restore.
+    const frs = await restJson(`franchisees?select=id,store_name,name,current_phase_id&current_phase_id=not.is.null&limit=1`);
+    if (!frs.length) return { ok: false, reason: 'No franchisee with a current phase to test with.' };
+    const fr = frs[0];
+    const phases = await restJson(`phases?select=id&limit=5`);
+    const other = (phases.find(p => p.id !== fr.current_phase_id) || {}).id;
+    if (!other) return { ok: false, reason: 'Need at least two phases to simulate a phase change.' };
+    const original = fr.current_phase_id;
+    try {
+      const up = await restPatch(`franchisees?id=eq.${fr.id}`, { current_phase_id: other });
+      return { ok: up.ok, fired: 'franchisees UPDATE -> phase change', store: fr.store_name || fr.name, restoredTo: original };
+    } finally {
+      await restPatch(`franchisees?id=eq.${fr.id}`, { current_phase_id: original });
+    }
+  }
+
+  return { ok: false, reason: 'Unknown simulate kind: ' + kind };
+}
+
 exports.handler = async (event) => {
   // Two ways to authenticate:
   //  (a) ?key=WEBHOOK_SECRET  -> for curl / server testing
@@ -56,6 +121,17 @@ exports.handler = async (event) => {
   }
 
   const out = { steps: {} };
+
+  // ── Optional: simulate a real webhook event by briefly toggling an existing
+  // row and restoring it. This fires the actual Supabase webhook end to end.
+  // Only UPDATE-based events are simulated (safely reversible); INSERT events
+  // would leave real rows behind, so we never fake those.
+  let sim = null;
+  try { sim = (JSON.parse(event.body || '{}')).simulate || null; } catch (e) {}
+  if (sim) {
+    const r = await simulateEvent(sim);
+    return { statusCode: 200, body: JSON.stringify({ simulate: sim, ...r }) };
+  }
 
   // Step 1: env var presence (never leak values).
   out.steps.env = {
