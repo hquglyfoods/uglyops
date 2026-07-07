@@ -128,6 +128,12 @@ body{font-family:'Inter',sans-serif;background:#F5F1E8;color:var(--text);min-hei
 .acct-menu-btn:hover{background:rgba(255,255,255,.06);}
 .acct-menu-backdrop{position:fixed;inset:0;z-index:1400;}
 .acct-menu-panel{position:absolute;top:calc(100% + 8px);right:0;min-width:200px;background:var(--panel);border:1px solid var(--border2);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.4);z-index:1401;overflow:hidden;padding:6px;}
+/* On desktop the bell + account menu sit at the BOTTOM of the sidebar, so their
+   popups must open upward instead of downward (which would fall off-screen). */
+@media (min-width:769px){
+  .sidebar-footer .notif-panel{top:auto;bottom:calc(100% + 8px);}
+  .sidebar-footer .acct-menu-panel{top:auto;bottom:calc(100% + 8px);}
+}
 .acct-menu-email{padding:8px 12px 10px;font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .acct-menu-item{display:block;width:100%;text-align:left;background:none;border:none;color:var(--text);font-family:inherit;font-size:13px;font-weight:600;padding:10px 12px;border-radius:8px;cursor:pointer;transition:background .15s;}
 .acct-menu-item:hover{background:var(--panel2);}
