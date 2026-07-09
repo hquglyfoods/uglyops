@@ -1206,7 +1206,7 @@ function App() {
 }
 
 function AuthScreen() {
-  const [e, t] = useState(""), [a, n] = useState(""), [l, r] = useState(""), [c, o] = useState(!1);
+  const [e, t] = useState(""), [a, n] = useState(""), [l, r] = useState(""), [c, o] = useState(!1), [view, setView] = useState("login"), [ok, setOk] = useState("");
   return React.createElement("div", {
     className: "auth-wrap"
   }, React.createElement("div", {
@@ -1215,7 +1215,7 @@ function AuthScreen() {
     className: "auth-logo"
   }, "Ugly Donuts"), React.createElement("div", {
     className: "auth-sub"
-  }, "Franchise OS — HQ Access"), React.createElement("form", {
+  }, "Franchise OS — HQ Access"), "login" === view ? React.createElement("form", {
     onSubmit: async function(t) {
       t.preventDefault(), o(!0), r("");
       const {
@@ -1245,7 +1245,89 @@ function AuthScreen() {
     disabled: c
   }, c ? "Signing in..." : "Sign In"), l && React.createElement("div", {
     className: "auth-err"
-  }, l))))
+  }, l), React.createElement("div", {
+    style: {
+      textAlign: "center",
+      marginTop: 16
+    }
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setView("forgot"), r(""), setOk("")
+    },
+    style: {
+      background: "none",
+      border: "none",
+      color: "var(--muted)",
+      cursor: "pointer",
+      fontSize: 12,
+      fontFamily: "inherit",
+      textDecoration: "underline"
+    }
+  }, "Forgot password?"))) : React.createElement("form", {
+    onSubmit: async function(t) {
+      if (t.preventDefault(), !e) return void r("Enter your email address.");
+      o(!0), r(""), setOk("");
+      const a = "If an account exists for " + e + ", a password reset link has been sent. Check your email (including spam).";
+      const {
+        error: n
+      } = await sb.auth.resetPasswordForEmail(e, {
+        redirectTo: "https://uglyops.netlify.app/os.html"
+      });
+      if (o(!1), n) {
+        const e = String(n.message || "").trim();
+        return void r(/rate|429|too many/i.test(e) ? "Too many reset emails were requested in a short time. Please wait a little and try again." : "The reset email could not be sent right now. Please try again in a moment.")
+      }
+      setOk(a)
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: "var(--muted)",
+      marginBottom: 16,
+      lineHeight: 1.5
+    }
+  }, "Enter your email and we'll send you a link to reset your password."), React.createElement("div", {
+    className: "form-group"
+  }, React.createElement("label", null, "Email"), React.createElement("input", {
+    type: "email",
+    value: e,
+    onChange: e => t(e.target.value),
+    autoFocus: !0
+  })), React.createElement("button", {
+    className: "btn-gold",
+    type: "submit",
+    disabled: c
+  }, c ? "Sending..." : "Send Reset Link"), l && React.createElement("div", {
+    className: "auth-err"
+  }, l), ok && React.createElement("div", {
+    style: {
+      color: "var(--green)",
+      fontSize: 13,
+      marginTop: 12,
+      textAlign: "center",
+      lineHeight: 1.5
+    }
+  }, ok), React.createElement("div", {
+    style: {
+      textAlign: "center",
+      marginTop: 16
+    }
+  }, React.createElement("button", {
+    type: "button",
+    onClick: () => {
+      setView("login"), r(""), setOk("")
+    },
+    style: {
+      background: "none",
+      border: "none",
+      color: "var(--muted)",
+      cursor: "pointer",
+      fontSize: 12,
+      fontFamily: "inherit",
+      textDecoration: "underline"
+    }
+  }, "← Back to login")))))
 }
 
 function MainApp({
