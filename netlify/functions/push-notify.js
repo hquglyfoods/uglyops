@@ -14,6 +14,38 @@ const VAPID = {
   subject: 'mailto:do-not-reply@uglydonuts-franchiseportal.com',
 };
 
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const FROM_EMAIL = 'do-not-reply@uglydonuts-franchiseportal.com';
+const FROM_NAME = 'Ugly Donuts Franchise Ops';
+// HQ notification inbox for resubmission alerts. profiles has no email column,
+// so configure HQ recipients via env (comma-separated) or this fallback.
+const HQ_EMAILS = (process.env.HQ_NOTIFY_EMAILS || 'hq@uglydonutsncorndogs.com')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
+async function sendEmail(to, subject, html) {
+  if (!RESEND_API_KEY) return false;
+  const list = (Array.isArray(to) ? to : [to]).filter(Boolean);
+  if (!list.length) return false;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: `${FROM_NAME} <${FROM_EMAIL}>`, to: list, subject, html }),
+    });
+    return res.ok;
+  } catch (e) { return false; }
+}
+
+function emailShell(heading, intro, bodyHtml) {
+  return `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0E0E0E;color:#F0EDE8;padding:32px;border-radius:12px;">`
+    + `<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#CC9C3A;margin-bottom:8px;">Ugly Donuts &amp; Corn Dogs</div>`
+    + `<h1 style="font-size:22px;margin:0 0 4px;color:#F0EDE8;">${heading}</h1>`
+    + `<p style="color:#8A8480;font-size:13px;margin:0 0 24px;">${intro}</p>`
+    + (bodyHtml || '')
+    + `<a href="https://uglyops.netlify.app/" style="display:inline-block;background:#F26419;color:#000;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">Open Franchise Ops</a>`
+    + `<p style="color:#5A5654;font-size:11px;margin-top:24px;">Ugly Donuts &amp; Corn Dogs Franchising LLC · Belleville, NJ</p></div>`;
+}
+
 async function rest(path, opts = {}) {
   const res = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
     ...opts,
@@ -173,6 +205,14 @@ exports.handler = async (event) => {
         title: 'Submitted for review', body: `${store}: ${title}`, tag: 'review-' + record.id, badge, data: { url: '/#open=review&id=' + record.id },
       }));
       await logNotif({ role: 'hq' }, { title: 'Submitted for review', body: `${store}: ${title}`, tag: 'review-' + record.id, data: { url: '/#open=review&id=' + record.id } });
+      // Resubmission (was rejected) -> email HQ so they know to re-review.
+      if (old_record && old_record.status === 'rejected' && HQ_EMAILS.length) {
+        try {
+          await sendEmail(HQ_EMAILS, `Resubmitted: ${title}`, emailShell('Task Resubmitted',
+            `${store} has made changes and resubmitted a task for your review.`,
+            `<div style="background:#1E1E1E;border:1px solid #2E2E2E;border-radius:10px;padding:20px;margin-bottom:20px;"><div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Store</div><div style="font-size:16px;font-weight:700;margin-bottom:10px;">${store}</div><div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Task</div><div style="font-size:18px;font-weight:700;">${title}</div></div>`));
+        } catch (e) { /* email must never break the webhook */ }
+      }
     }
 
     // 1b) HQ rejects a submission -> notify that franchisee's devices
@@ -188,6 +228,17 @@ exports.handler = async (event) => {
         title: 'Changes requested', body: `${title}: ${note}`, tag: 'reject-' + record.id, badge, data: { url: '/#open=tasks&id=' + record.id },
       }));
       await logNotif({ role: 'franchisee', franchisee_id: record.franchisee_id }, { title: 'Changes requested', body: `${title}: ${note}`, tag: 'reject-' + record.id, data: { url: '/#open=tasks&id=' + record.id } });
+      // Email the franchisee (covers every reject path, since this fires on the DB update).
+      try {
+        const frs = await restJson(`franchisees?id=eq.${record.franchisee_id}&select=email,store_name,name`);
+        const fr = frs[0];
+        if (fr && fr.email) {
+          const who = fr.store_name || fr.name || 'there';
+          await sendEmail(fr.email, `Changes requested: ${title}`, emailShell('Changes Requested',
+            `Hi ${who}, HQ reviewed your submission and asked for some changes.`,
+            `<div style="background:#1E1E1E;border:1px solid #2E2E2E;border-radius:10px;padding:20px;margin-bottom:20px;"><div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Task</div><div style="font-size:20px;font-weight:700;margin-bottom:12px;">${title}</div>${record.hq_notes ? `<div style="font-size:11px;color:#8A8480;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">HQ Feedback</div><div style="font-size:14px;color:#E05252;">${record.hq_notes}</div>` : ''}</div><p style="color:#8A8480;font-size:13px;margin:0 0 20px;">Please make the changes and resubmit. Your original submission is kept on record.</p>`));
+        }
+      } catch (e) { /* email must never break the webhook */ }
     }
 
     // 2) New announcement published -> all franchisee devices

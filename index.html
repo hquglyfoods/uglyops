@@ -3738,7 +3738,7 @@ function Dashboard({
         hq_notes: t,
         reviewed_at: (new Date).toISOString(),
         reviewed_by: "HQ"
-      }).eq("id", e.id), e.franchisees?.email && sendEmail(e.franchisees.email, `Changes requested: ${e.ops_tasks?.title || "your task"}`, rejectEmailHtml(e.ops_tasks?.title || "Your task", t, e.franchisees?.store_name || e.franchisees?.name || "there")), b(t => t.filter(t => t.id !== e.id)), o(e => ({
+      }).eq("id", e.id), b(t => t.filter(t => t.id !== e.id)), o(e => ({
         ...e,
         pending: e.pending - 1
       })))
@@ -12303,13 +12303,6 @@ function FranchiseeTaskModal({
               assignment_id: e.id
             }
           });
-        }
-        if (wasRejected && "submitted" === t) {
-          try {
-            const hq = await sb.from("profiles").select("email").eq("role", "hq");
-            const emails = (hq.data || []).map(p => p.email).filter(Boolean);
-            emails.length && sendEmail(emails, `Resubmitted: ${e.ops_tasks?.title || "a task"}`, taskEmailHtml(e.ops_tasks?.title || "Task resubmitted", "Resubmission for review", null, "HQ"));
-          } catch (er) {}
         }
         "approved" === t && maybeCompleteTask(e.ops_task_id);
         n()
