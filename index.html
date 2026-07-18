@@ -2394,6 +2394,7 @@ function NotificationBell({
     className: "notif-wrap"
   }, React.createElement("button", {
     className: "notif-bell",
+    "data-tut": "tut-bell",
     "aria-label": "Notifications",
     onClick: () => t ? a(!1) : async function() {
       if (a(!0), s) {
@@ -10162,11 +10163,600 @@ function ChangePassword({
   }, "Cancel"))))))
 }
 
+function FranchiseeTutorial({
+  onClose
+}) {
+  const STEPS = [{
+    center: true,
+    mark: "\uD83D\uDC4B",
+    title: "Welcome to your Franchise Portal",
+    body: "This is where you and HQ stay in sync, every day. Let's take 30 seconds to show you around so you get the most out of it.",
+    cta: "Show me around"
+  }, {
+    target: "tab-tasks",
+    glyph: "\u25A4",
+    label: "Tasks & Announcements",
+    title: "Your daily to-do list",
+    body: "Every task HQ assigns shows up here: cleanliness checks, photo uploads, menu changes. Finish them by adding photos or notes, then submit for review.",
+    when: "Check this first thing each shift. The number badge tells you how many tasks still need you."
+  }, {
+    center: true,
+    mark: "\u21A9\uFE0F",
+    title: "Rejected? No problem",
+    body: "If HQ needs something fixed, the task comes back marked \"Changes requested\" with their note. Open it, update the photo or text, and resubmit. Your first submission is always kept on record.",
+    cta: "Got it",
+    when: "You can resubmit as many times as needed. HQ is notified each time, and so are you."
+  }, {
+    center: true,
+    mark: "\uD83D\uDD17",
+    title: "Reference links",
+    body: "Some tasks include links from HQ, like a poster to download or a guide to follow. Tap a link chip inside the task to open it.",
+    cta: "Next",
+    when: "Look for the link chips inside a task before you start, so you have the right materials."
+  }, {
+    target: "tab-contact",
+    glyph: "\u2709",
+    label: "Contact HQ",
+    title: "Message HQ directly",
+    body: "Questions, issues, or something you need? Send HQ a message here and keep the whole conversation in one place.",
+    when: "Use it for anything that isn't an emergency: supply questions, scheduling, clarifications."
+  }, {
+    target: "tab-warnings",
+    glyph: "\u26A0",
+    label: "My Standing",
+    title: "Know where you stand",
+    body: "Any warnings or notes on your store's standing appear here. It's how you stay ahead of small issues before they grow.",
+    when: "Glance at it weekly. A clean standing is the goal; if something shows up, address it early."
+  }, {
+    target: "tab-bot",
+    glyph: "\u25C9",
+    label: "UglyBot",
+    title: "Ask UglyBot anything",
+    body: "UglyBot is your instant help desk. Ask how to do something, look up a process, or get answers about the brand, day or night.",
+    when: "Faster than waiting on a reply. Try it before messaging HQ for how-to questions."
+  }, {
+    target: "tut-bell",
+    glyph: "\uD83D\uDD14",
+    label: "Notifications",
+    title: "Never miss an update",
+    body: "The bell lights up when HQ assigns a task, requests changes, or posts an announcement. Handle the item and the badge clears itself.",
+    when: "A red number means something needs you. Tap it to jump straight to what's new."
+  }, {
+    target: "tab-password",
+    glyph: "\u25CE",
+    label: "Settings",
+    title: "Your account",
+    body: "Change your password and manage your account here. You can also reopen this tour any time from Settings.",
+    when: "Set your password once on your work phone so you're ready to go."
+  }, {
+    install: true,
+    glyph: "\uD83D\uDCF2",
+    label: "Step 1 of 2 \u00B7 Install",
+    title: "Add the app to your home screen",
+    body: "Installing turns this into a real app icon on your phone, and it's required to receive push alerts. It takes about 10 seconds.",
+    when: "Do this on your work phone so task alerts reach you the moment HQ sends them."
+  }, {
+    notif: true,
+    glyph: "\uD83D\uDD14",
+    label: "Step 2 of 2 \u00B7 Notifications",
+    title: "Turn on notifications",
+    body: "Once installed, open the app from your home screen and tap Allow. You'll get a push the instant HQ assigns a task, requests changes, or posts an announcement.",
+    when: "Without this, you'd have to open the app to check. With it on, the app comes to you."
+  }, {
+    center: true,
+    mark: "\uD83C\uDF69",
+    title: "You're all set",
+    body: "That's the tour. You can reopen it any time from Settings. Now go make something worth remembering.",
+    cta: "Start using the app"
+  }];
+  const [i, setI] = React.useState(0);
+  const [os, setOs] = React.useState(function () {
+    return /android/i.test(navigator.userAgent) ? "android" : "ios";
+  });
+  const [rect, setRect] = React.useState(null);
+  const s = STEPS[i];
+  const measure = React.useCallback(function () {
+    if (!s || !s.target) {
+      setRect(null);
+      return;
+    }
+    const el = document.querySelector('[data-tut="' + s.target + '"]');
+    if (!el) {
+      setRect(null);
+      return;
+    }
+    const r = el.getBoundingClientRect();
+    setRect({
+      top: r.top,
+      left: r.left,
+      w: r.width,
+      h: r.height
+    });
+  }, [s]);
+  React.useEffect(function () {
+    measure();
+    window.addEventListener("resize", measure);
+    const t = setTimeout(measure, 60);
+    return function () {
+      window.removeEventListener("resize", measure);
+      clearTimeout(t);
+    };
+  }, [measure]);
+  function next() {
+    i < STEPS.length - 1 ? setI(i + 1) : finish();
+  }
+  function prev() {
+    if (i > 0) setI(i - 1);
+  }
+  function finish() {
+    try {
+      localStorage.setItem("ugly_fr_tutorial_done", "1");
+    } catch (e) {}
+    onClose && onClose();
+  }
+  const scrim = React.createElement("div", {
+    onClick: function () {},
+    style: {
+      position: "fixed",
+      inset: 0,
+      background: "rgba(16,20,18,.72)",
+      zIndex: 9998
+    }
+  });
+  const dots = React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 5
+    }
+  }, STEPS.map(function (_, k) {
+    return React.createElement("i", {
+      key: k,
+      style: {
+        width: k === i ? 16 : 6,
+        height: 6,
+        borderRadius: 4,
+        background: k === i ? "var(--gold-deep,#B8860B)" : "var(--border,#E9E2D2)",
+        display: "inline-block",
+        transition: "all .3s"
+      }
+    });
+  }));
+  function btn(label, onClick, primary) {
+    return React.createElement("button", {
+      onClick: onClick,
+      style: {
+        fontFamily: "inherit",
+        fontSize: 13,
+        fontWeight: 700,
+        borderRadius: 10,
+        padding: "9px 16px",
+        border: "none",
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+        background: primary ? "var(--brick,#A6452F)" : "none",
+        color: primary ? "#fff" : "var(--muted,#635D4E)",
+        textDecoration: primary ? "none" : "underline"
+      }
+    }, label);
+  }
+
+  // Center card (welcome / message / finish)
+  if (s.center) {
+    return React.createElement(React.Fragment, null, scrim, React.createElement("div", {
+      style: {
+        position: "fixed",
+        left: 22,
+        right: 22,
+        top: "50%",
+        transform: "translateY(-50%)",
+        zIndex: 9999,
+        background: "var(--panel,#fff)",
+        borderRadius: 22,
+        padding: "26px 22px",
+        textAlign: "center",
+        boxShadow: "0 24px 60px -14px rgba(20,32,30,.55)",
+        maxWidth: 460,
+        margin: "0 auto"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 34,
+        marginBottom: 6
+      }
+    }, s.mark), React.createElement("h2", {
+      style: {
+        fontSize: 21,
+        margin: "6px 0 8px",
+        letterSpacing: "-.01em",
+        color: "var(--text,#202623)"
+      }
+    }, s.title), React.createElement("p", {
+      style: {
+        fontSize: 13.5,
+        lineHeight: 1.62,
+        color: "var(--muted,#635D4E)",
+        margin: "0 0 6px"
+      }
+    }, s.body), s.when ? React.createElement("div", {
+      style: {
+        fontSize: 12,
+        lineHeight: 1.55,
+        color: "var(--text,#202623)",
+        background: "var(--panel2,#FAF7F0)",
+        borderLeft: "3px solid var(--gold,#E3BE64)",
+        borderRadius: 6,
+        padding: "9px 11px",
+        marginTop: 12,
+        textAlign: "left"
+      }
+    }, React.createElement("b", {
+      style: {
+        color: "var(--gold-deep,#B8860B)"
+      }
+    }, "When to use: "), s.when) : null, React.createElement("button", {
+      onClick: next,
+      style: {
+        marginTop: 16,
+        width: "100%",
+        fontFamily: "inherit",
+        fontSize: 14,
+        fontWeight: 700,
+        background: "var(--brick,#A6452F)",
+        color: "#fff",
+        border: "none",
+        borderRadius: 12,
+        padding: 12,
+        cursor: "pointer"
+      }
+    }, s.cta || "Next"), i === 0 ? React.createElement("button", {
+      onClick: finish,
+      style: {
+        display: "block",
+        margin: "8px auto 0",
+        background: "none",
+        border: "none",
+        color: "var(--muted,#635D4E)",
+        fontSize: 12,
+        fontFamily: "inherit",
+        textDecoration: "underline",
+        cursor: "pointer"
+      }
+    }, "Skip tour") : null));
+  }
+
+  // Install / Notif sheet
+  if (s.install || s.notif) {
+    const osToggle = React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 8,
+        margin: "2px 0 12px"
+      }
+    }, ["ios", "android"].map(function (o) {
+      return React.createElement("button", {
+        key: o,
+        onClick: function () {
+          setOs(o);
+        },
+        style: {
+          flex: 1,
+          fontFamily: "inherit",
+          fontSize: 12.5,
+          fontWeight: 700,
+          cursor: "pointer",
+          padding: 9,
+          borderRadius: 10,
+          border: "1px solid var(--border,#E9E2D2)",
+          background: os === o ? "var(--ink,#14201E)" : "var(--panel2,#FAF7F0)",
+          color: os === o ? "var(--cream,#F5F1E8)" : "var(--muted,#635D4E)"
+        }
+      }, o === "ios" ? "iPhone" : "Android");
+    }));
+    function row(n, txt) {
+      return React.createElement("div", {
+        key: n,
+        style: {
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 10,
+          fontSize: 12.5,
+          lineHeight: 1.5,
+          color: "var(--text,#202623)"
+        }
+      }, React.createElement("span", {
+        style: {
+          flexShrink: 0,
+          width: 20,
+          height: 20,
+          borderRadius: "50%",
+          background: "var(--gold,#E3BE64)",
+          color: "var(--ink,#14201E)",
+          fontSize: 11,
+          fontWeight: 800,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }
+      }, n), React.createElement("span", {
+        style: {
+          flex: 1,
+          minWidth: 0
+        },
+        dangerouslySetInnerHTML: {
+          __html: txt
+        }
+      }));
+    }
+    let guide;
+    if (s.install) {
+      guide = os === "ios" ? React.createElement("div", {
+        style: {
+          display: "flex",
+          flexDirection: "column",
+          gap: 8
+        }
+      }, row(1, 'Tap the <b>Share</b> button (the square with an up-arrow) at the bottom of Safari'), row(2, 'Scroll down and tap <b>Add to Home Screen</b>'), row(3, 'Tap <b>Add</b>, then open <b>Ugly Ops</b> from your home screen')) : React.createElement("div", {
+        style: {
+          display: "flex",
+          flexDirection: "column",
+          gap: 8
+        }
+      }, row(1, 'Tap <b>Install app</b> when the banner appears, or open the menu and choose <b>Install app</b>'), row(2, 'Tap <b>Install</b> to confirm'), row(3, 'Open <b>Ugly Ops</b> from your home screen'));
+    } else {
+      guide = React.createElement("div", {
+        style: {
+          padding: "2px 0"
+        }
+      }, React.createElement("div", {
+        style: {
+          background: "var(--panel2,#FAF7F0)",
+          border: "1px solid var(--border,#E9E2D2)",
+          borderRadius: 16,
+          padding: 16,
+          textAlign: "center",
+          maxWidth: 300,
+          margin: "0 auto"
+        }
+      }, React.createElement("div", {
+        style: {
+          fontSize: 13.5,
+          fontWeight: 700,
+          marginBottom: 5,
+          lineHeight: 1.35,
+          color: "var(--text,#202623)"
+        }
+      }, '"Ugly Ops" Would Like to Send You Notifications'), React.createElement("div", {
+        style: {
+          fontSize: 11.5,
+          color: "var(--muted,#635D4E)",
+          marginBottom: 14,
+          lineHeight: 1.45
+        }
+      }, "Alerts for new tasks, changes, and announcements."), React.createElement("div", {
+        style: {
+          display: "flex",
+          borderTop: "1px solid var(--border,#E9E2D2)",
+          margin: "0 -16px -16px"
+        }
+      }, React.createElement("div", {
+        style: {
+          flex: 1,
+          padding: 11,
+          fontSize: 13.5,
+          fontWeight: 600,
+          color: "var(--muted,#635D4E)",
+          borderRight: "1px solid var(--border,#E9E2D2)"
+        }
+      }, "Don\u2019t Allow"), React.createElement("div", {
+        style: {
+          flex: 1,
+          padding: 11,
+          fontSize: 13.5,
+          fontWeight: 800,
+          color: "var(--brick,#A6452F)"
+        }
+      }, "Allow"))));
+    }
+    return React.createElement(React.Fragment, null, scrim, React.createElement("div", {
+      style: {
+        position: "fixed",
+        left: 18,
+        right: 18,
+        top: 54,
+        zIndex: 9999,
+        maxWidth: 460,
+        margin: "0 auto",
+        background: "var(--panel,#fff)",
+        borderRadius: 18,
+        padding: "18px 18px 16px",
+        boxShadow: "0 20px 50px -12px rgba(20,32,30,.5)",
+        maxHeight: "82vh",
+        overflowY: "auto"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 10.5,
+        letterSpacing: ".14em",
+        textTransform: "uppercase",
+        color: "var(--gold-deep,#B8860B)",
+        fontWeight: 700,
+        marginBottom: 8,
+        display: "flex",
+        alignItems: "center",
+        gap: 8
+      }
+    }, React.createElement("span", {
+      style: {
+        fontSize: 15
+      }
+    }, s.glyph), s.label), React.createElement("h3", {
+      style: {
+        fontSize: 17,
+        margin: "0 0 7px",
+        letterSpacing: "-.01em",
+        color: "var(--text,#202623)"
+      }
+    }, s.title), React.createElement("p", {
+      style: {
+        fontSize: 13,
+        lineHeight: 1.6,
+        color: "var(--muted,#635D4E)",
+        margin: "0 0 10px"
+      }
+    }, s.body), s.install ? osToggle : null, guide, s.when ? React.createElement("div", {
+      style: {
+        fontSize: 12,
+        lineHeight: 1.55,
+        color: "var(--text,#202623)",
+        background: "var(--panel2,#FAF7F0)",
+        borderLeft: "3px solid var(--gold,#E3BE64)",
+        borderRadius: 6,
+        padding: "9px 11px",
+        marginTop: 12
+      }
+    }, React.createElement("b", {
+      style: {
+        color: "var(--gold-deep,#B8860B)"
+      }
+    }, "Why it matters: "), s.when) : null, React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        gap: 8,
+        marginTop: 16,
+        borderTop: "1px solid var(--border,#E9E2D2)",
+        paddingTop: 14
+      }
+    }, btn("Back", prev, false), btn(s.notif ? "Done" : "Next", next, true))));
+  }
+
+  // Spotlight + coach for a targeted element
+  const pad = 6;
+  const spot = rect ? React.createElement("div", {
+    style: {
+      position: "fixed",
+      top: rect.top - pad,
+      left: rect.left - pad,
+      width: rect.w + pad * 2,
+      height: rect.h + pad * 2,
+      borderRadius: 14,
+      boxShadow: "0 0 0 9999px rgba(16,20,18,.72)",
+      border: "2px solid var(--gold,#E3BE64)",
+      zIndex: 9998,
+      pointerEvents: "none",
+      transition: "all .4s cubic-bezier(.4,0,.2,1)"
+    }
+  }) : scrim;
+  const belowTarget = rect && rect.top < window.innerHeight / 2;
+  const coachPos = rect ? belowTarget ? {
+    top: rect.top + rect.h + 16
+  } : {
+    bottom: window.innerHeight - rect.top + 14
+  } : {
+    top: "50%",
+    transform: "translateY(-50%)"
+  };
+  const coach = React.createElement("div", {
+    style: Object.assign({
+      position: "fixed",
+      left: 18,
+      right: 18,
+      zIndex: 9999,
+      maxWidth: 460,
+      margin: "0 auto",
+      background: "var(--panel,#fff)",
+      borderRadius: 18,
+      padding: "18px 18px 16px",
+      boxShadow: "0 20px 50px -12px rgba(20,32,30,.5)"
+    }, coachPos)
+  }, React.createElement("div", {
+    style: {
+      fontSize: 10.5,
+      letterSpacing: ".14em",
+      textTransform: "uppercase",
+      color: "var(--gold-deep,#B8860B)",
+      fontWeight: 700,
+      marginBottom: 8,
+      display: "flex",
+      alignItems: "center",
+      gap: 8
+    }
+  }, React.createElement("span", {
+    style: {
+      fontSize: 15
+    }
+  }, s.glyph), s.label), React.createElement("h3", {
+    style: {
+      fontSize: 17,
+      margin: "0 0 7px",
+      letterSpacing: "-.01em",
+      color: "var(--text,#202623)"
+    }
+  }, s.title), React.createElement("p", {
+    style: {
+      fontSize: 13,
+      lineHeight: 1.62,
+      color: "var(--muted,#635D4E)",
+      margin: "0 0 6px"
+    }
+  }, s.body), s.when ? React.createElement("div", {
+    style: {
+      fontSize: 12,
+      lineHeight: 1.55,
+      color: "var(--text,#202623)",
+      background: "var(--panel2,#FAF7F0)",
+      borderLeft: "3px solid var(--gold,#E3BE64)",
+      borderRadius: 6,
+      padding: "9px 11px",
+      marginTop: 10
+    }
+  }, React.createElement("b", {
+    style: {
+      color: "var(--gold-deep,#B8860B)"
+    }
+  }, "When to use: "), s.when) : null, React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 16
+    }
+  }, dots, React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      alignItems: "center"
+    }
+  }, i > 1 ? btn("Back", prev, false) : null, btn("Next", next, true))));
+  const skip = React.createElement("button", {
+    onClick: finish,
+    style: {
+      position: "fixed",
+      top: 12,
+      right: 14,
+      zIndex: 10000,
+      fontSize: 12,
+      color: "rgba(255,255,255,.85)",
+      background: "rgba(0,0,0,.28)",
+      border: "1px solid rgba(255,255,255,.25)",
+      borderRadius: 20,
+      padding: "5px 12px",
+      cursor: "pointer",
+      fontWeight: 600,
+      fontFamily: "inherit"
+    }
+  }, "Skip");
+  return React.createElement(React.Fragment, null, spot, coach, skip);
+}
+
 function FranchiseePortal({
   session: e,
   profile: t
 }) {
-  const [a, n] = useState(() => "#install" === window.location.hash ? "password" : "tasks"), [r, o] = useState(!1), [l, s] = useState(0), [i, c] = useState(0), [d, m] = useState(0), [p, u] = useState(0), [g, f] = useState(0), [v, b] = useState(0), [h, y] = useState("tasks"), R = t?.store || t?.full_name || t?.name || "My Store";
+  const [a, n] = useState(() => "#install" === window.location.hash ? "password" : "tasks"), [r, o] = useState(!1), [l, s] = useState(0), [i, c] = useState(0), [d, m] = useState(0), [p, u] = useState(0), [g, f] = useState(0), [v, b] = useState(0), [h, y] = useState("tasks"), [showTut, setShowTut] = useState(() => {
+    try { return "1" !== localStorage.getItem("ugly_fr_tutorial_done"); } catch (e) { return !1; }
+  }), R = t?.store || t?.full_name || t?.name || "My Store";
   React.useEffect(() => {
     setReportContext({
       role: "franchisee",
@@ -10404,7 +10994,32 @@ function FranchiseePortal({
       fontWeight: 800,
       color: "var(--text)"
     }
-  }, R || "—")), p > 0 && React.createElement("div", {
+  }, R || "—")), React.createElement("div", {
+    style: {
+      padding: "12px 16px 0"
+    }
+  }, React.createElement("button", {
+    onClick: () => {
+      try { localStorage.removeItem("ugly_fr_tutorial_done"); } catch (e) {}
+      setShowTut(!0);
+    },
+    style: {
+      width: "100%",
+      fontFamily: "inherit",
+      fontSize: 13.5,
+      fontWeight: 600,
+      background: "var(--panel2)",
+      color: "var(--text)",
+      border: "1px solid var(--border)",
+      borderRadius: 10,
+      padding: "11px",
+      cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8
+    }
+  }, "\uD83D\uDCD6 Replay the app tour")), p > 0 && React.createElement("div", {
     style: {
       padding: "0 16px",
       marginTop: 16
@@ -10529,6 +11144,7 @@ function FranchiseePortal({
     }))
   }].map(e => React.createElement("button", {
     key: e.v,
+    "data-tut": "tab-" + e.v,
     className: "tb " + (a === e.v ? "on" : ""),
     onClick: () => {
       "bot" === e.v ? o(!0) : ("tasks" === e.v && y("tasks"), n(e.v)), window.scrollTo(0, 0)
@@ -10580,7 +11196,9 @@ function ContactHQ({
     m()
   }, []);
   const p = n.filter(e => "hq" === e.last_sender_role).length;
-  return React.createElement(React.Fragment, null, React.createElement("div", {
+  return React.createElement(React.Fragment, null, showTut && React.createElement(FranchiseeTutorial, {
+    onClose: () => setShowTut(!1)
+  }), React.createElement("div", {
     className: "page-header"
   }, React.createElement("div", null, React.createElement("div", {
     className: "page-title",
