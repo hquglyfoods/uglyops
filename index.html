@@ -888,6 +888,65 @@ function __autoReport(e, t) {
   }))
 }
 
+var PERF_ON = (function () {
+  try { return /[?&]perf=1\b/.test(window.location.search); } catch (e) { return false; }
+})();
+var PERF_LOG = [];
+var PERF_T0 = (function () { try { return performance.now(); } catch (e) { return Date.now(); } })();
+function perfNow() { try { return performance.now(); } catch (e) { return Date.now(); } }
+async function perfTime(label, promise) {
+  if (!PERF_ON) return promise;
+  var start = perfNow();
+  var entry = { label: label, start: Math.round(start - PERF_T0), ms: null, ok: null };
+  PERF_LOG.push(entry);
+  try {
+    var r = await promise;
+    entry.ms = Math.round(perfNow() - start); entry.ok = true;
+    try { window.dispatchEvent(new Event("perf-update")); } catch (e) {}
+    return r;
+  } catch (e) {
+    entry.ms = Math.round(perfNow() - start); entry.ok = false;
+    try { window.dispatchEvent(new Event("perf-update")); } catch (e2) {}
+    throw e;
+  }
+}
+function perfMark(label) {
+  if (!PERF_ON) return;
+  PERF_LOG.push({ label: label, start: Math.round(perfNow() - PERF_T0), ms: 0, ok: true, mark: true });
+  try { window.dispatchEvent(new Event("perf-update")); } catch (e) {}
+}
+
+function PerfPanel() {
+  if (!PERF_ON) return null;
+  const [, force] = React.useState(0);
+  const [open, setOpen] = React.useState(true);
+  React.useEffect(function () {
+    const h = function () { force(function (n) { return n + 1; }); };
+    window.addEventListener("perf-update", h);
+    const iv = setInterval(h, 500);
+    return function () { window.removeEventListener("perf-update", h); clearInterval(iv); };
+  }, []);
+  const rows = PERF_LOG.slice();
+  const total = rows.reduce(function (m, r) { return r.ms != null ? Math.max(m, r.start + r.ms) : m; }, 0);
+  const barStyle = { position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 99999, background: "rgba(12,18,16,.96)", color: "#EDEAE3", fontFamily: "ui-monospace,Menlo,Consolas,monospace", fontSize: 11, borderTop: "1px solid #3A473E", maxHeight: open ? "45vh" : "auto", overflowY: "auto", boxShadow: "0 -8px 24px rgba(0,0,0,.4)" };
+  const head = React.createElement("div", { onClick: function () { setOpen(!open); }, style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", cursor: "pointer", position: "sticky", top: 0, background: "rgba(12,18,16,.98)", borderBottom: "1px solid #2E3B33" } },
+    React.createElement("span", { style: { fontWeight: 700, color: "#E3BE64" } }, "\u26A1 Boot performance"),
+    React.createElement("span", { style: { color: "#93A19A" } }, rows.length + " steps \u00B7 " + total + "ms total \u00B7 tap to " + (open ? "hide" : "show")));
+  if (!open) return React.createElement("div", { style: barStyle }, head);
+  const list = rows.map(function (r, k) {
+    const pct = total > 0 && r.ms != null ? Math.max(2, Math.round(r.ms / total * 100)) : 0;
+    const color = r.ok === false ? "#E0716A" : r.mark ? "#93A19A" : (r.ms != null && r.ms > 1500) ? "#E0716A" : (r.ms != null && r.ms > 700) ? "#E3BE64" : "#5FB87A";
+    return React.createElement("div", { key: k, style: { padding: "6px 12px", borderBottom: "1px solid #1E2A22" } },
+      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", gap: 10 } },
+        React.createElement("span", { style: { color: "#EDEAE3", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, (r.ok === false ? "\u2715 " : r.mark ? "\u2022 " : "") + r.label),
+        React.createElement("span", { style: { color: color, fontWeight: 700, flexShrink: 0 } }, r.ms == null ? "\u2026" : r.mark ? ("@" + r.start + "ms") : (r.ms + "ms"))),
+      !r.mark && r.ms != null ? React.createElement("div", { style: { height: 3, marginTop: 4, borderRadius: 2, background: "#243634" } },
+        React.createElement("div", { style: { height: 3, borderRadius: 2, width: pct + "%", background: color } })) : null);
+  });
+  return React.createElement("div", { style: barStyle }, head, React.createElement("div", null, list),
+    React.createElement("div", { style: { padding: "8px 12px", color: "#6E7B74", fontSize: 10 } }, "Add ?perf=1 to the URL to show this panel. Green <700ms \u00B7 amber <1500ms \u00B7 red slow/failed."));
+}
+
 function setAppBadgeCount(e) {
   try {
     if (!navigator.setAppBadge) return;
@@ -1588,7 +1647,7 @@ function App() {
           const {
             data: t,
             error: a
-          } = await l(sb.from("profiles").select("*").eq("id", e).maybeSingle(), 4e3);
+          } = await perfTime("loadProfile (profiles query)", l(sb.from("profiles").select("*").eq("id", e).maybeSingle(), 4e3));
           n(a ? {
             role: "unknown",
             _loadError: !0
@@ -1603,12 +1662,13 @@ function App() {
         }
       }
     };
-    l(sb.auth.getSession(), 4e3).then(({
+    perfMark("boot start");
+    perfTime("getSession", l(sb.auth.getSession(), 4e3)).then(({
       data: e
     }) => {
       t(e.session), e.session && i(e.session.user.id)
     }).catch(() => {}).finally(() => {
-      clearTimeout(r), a()
+      clearTimeout(r), a(), perfMark("boot finished (getSession path)")
     });
     const {
       data: {
@@ -13497,7 +13557,7 @@ function UglyBotModal({
 try {
   clearInterval(window.__splashTimer), clearTimeout(window.__splashStall)
 } catch (e) {}
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App, null));
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(React.Fragment, null, React.createElement(App, null), React.createElement(PerfPanel, null)));
 </script>
 <script>
 /* Pull-to-refresh for installed PWA (mobile touch only). Keeps current screen via #open= hash. */
