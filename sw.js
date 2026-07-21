@@ -3,7 +3,9 @@
    would keep serving stale builds. Network passthrough only. */
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(clients.claim()));
-self.addEventListener('fetch', e => {});
+
+/* No fetch handler: caching is intentionally disabled, and an empty fetch
+   listener only adds per-request overhead (Chrome flags it as no-op). */
 
 /* Push: payload is JSON {title, body, badge} */
 self.addEventListener('push', e => {
