@@ -442,6 +442,24 @@ td{padding:12px 16px;font-size:13px;vertical-align:middle;}
 .attn-nm{font-size:13.5px;font-weight:700;}
 .attn-m{font-size:11.5px;color:var(--muted);margin-top:1px;}
 @media(max-width:760px){.fu-grid,.attn-grid{grid-template-columns:1fr;}.flbl{font-size:8.5px;}}
+/* === Lead Stage Settings === */
+.ls-note{font-size:12.5px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:11px 13px;margin-bottom:16px;line-height:1.5;}
+.ls-list{display:flex;flex-direction:column;gap:10px;}
+.ls-row{display:flex;gap:12px;align-items:flex-start;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px;}
+.ls-row-locked{opacity:.92;}
+.ls-ord{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
+.ls-ord-empty{width:30px;}
+.ls-arrow{width:30px;height:22px;border:1px solid var(--border);background:var(--panel2);border-radius:6px;font-size:12px;cursor:pointer;color:var(--text);line-height:1;display:flex;align-items:center;justify-content:center;}
+.ls-arrow:disabled{opacity:.3;cursor:default;}
+.ls-swatch{width:14px;height:14px;border-radius:4px;flex-shrink:0;margin-top:8px;}
+.ls-main{flex:1;min-width:0;}
+.ls-input{width:100%;font-family:inherit;font-size:14px;font-weight:600;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:9px 10px;color:var(--text);}
+.ls-colors{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+.ls-dot{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;}
+.ls-dot.on{border-color:var(--text);box-shadow:0 0 0 2px var(--panel),0 0 0 3px var(--text);}
+.ls-locked-note{font-size:10.5px;color:var(--muted);margin-top:5px;font-style:italic;}
+.ls-actions{margin-top:18px;display:flex;justify-content:flex-end;}
+.ls-err{margin-top:12px;font-size:12.5px;color:var(--red);}
 </style>
 </head>
 <body>
@@ -844,7 +862,7 @@ function __autoReport(e, t) {
     __autoReport("rejection", t && (t.message || t.toString && t.toString()) || "unhandled rejection")
   } catch (e) {}
 }));
-const STAGES = [{
+let STAGES = [{
     key: "new_inquiry",
     label: "New Inquiry",
     color: "#8A8480"
@@ -876,8 +894,26 @@ const STAGES = [{
     key: "rejected",
     label: "Rejected",
     color: "#E05252"
-  }],
-  OWNERS = ["CEO", "COO", "CMO", "CBO", "CPO", "FRANCHISEE"],
+  }];
+const STAGE_DEFAULTS = STAGES.map(s => ({ ...s }));
+async function loadStageSettings() {
+  try {
+    const { data } = await sb.from("lead_stage_settings").select("stage_key,label,color,sort_order");
+    if (!data || !data.length) return;
+    const byKey = {};
+    data.forEach(r => { byKey[r.stage_key] = r; });
+    const merged = STAGE_DEFAULTS.map(function (def) {
+      const o = byKey[def.key];
+      return o ? { key: def.key, label: o.label || def.label, color: o.color || def.color, sort_order: o.sort_order } : { ...def, sort_order: null };
+    });
+    // apply saved order (rejected always last); items without sort_order keep default position
+    const withOrder = merged.filter(m => m.sort_order != null).sort((a, b) => a.sort_order - b.sort_order);
+    const withoutOrder = merged.filter(m => m.sort_order == null && m.key !== "rejected");
+    const rejected = merged.filter(m => m.key === "rejected");
+    STAGES = withOrder.concat(withoutOrder).filter(m => m.key !== "rejected").concat(rejected);
+  } catch (e) {}
+}
+const OWNERS = ["CEO", "COO", "CMO", "CBO", "CPO", "FRANCHISEE"],
   SOURCES = ["email", "referral", "website", "broker", "event", "other"],
   TITLES = ["CEO", "COO", "CMO", "CBO", "CPO"];
 
@@ -1209,7 +1245,7 @@ function AccountMenu({
 }
 
 function App() {
-  const [e, t] = useState(null), [a, n] = useState(!0), l = ["dashboard", "board", "followups", "calendar", "leads", "franchisees", "territory", "team", "settings", "password"], [r, c] = useState(() => {
+  const [e, t] = useState(null), [a, n] = useState(!0), l = ["dashboard", "board", "followups", "calendar", "leads", "franchisees", "territory", "team", "settings", "leadstages", "password"], [r, c] = useState(() => {
     const e = (window.location.hash || "").match(/#open=([a-z]+)/);
     return e && l.includes(e[1]) ? e[1] : "dashboard"
   });
@@ -1229,7 +1265,7 @@ function App() {
     }) => {
       t(e.session)
     }).catch(() => {}).finally(() => {
-      clearTimeout(l), a()
+      loadStageSettings().catch(() => {}).finally(() => { clearTimeout(l), a() })
     });
     const {
       data: {
@@ -1442,6 +1478,10 @@ function MainApp({
     key: "settings",
     icon: "◎",
     label: "Phase"
+  }, {
+    key: "leadstages",
+    icon: "◈",
+    label: "Stages"
   }];
   return React.createElement("div", {
     className: "app"
@@ -1492,7 +1532,7 @@ function MainApp({
   }), "leads" === e && React.createElement(LeadCRM, {
     openLeadId: r,
     onConsumed: () => c(null)
-  }), "followups" === e && React.createElement(FollowUps, null), "franchisees" === e && React.createElement(FranchiseeTracker, null), "territory" === e && React.createElement(TerritoryManager, null), "calendar" === e && React.createElement(CalendarView, null), "team" === e && React.createElement(TeamManager, null), "board" === e && React.createElement(PhaseBoard, null), "settings" === e && React.createElement(PhaseSettings, null), "password" === e && React.createElement(ChangePassword, {
+  }), "followups" === e && React.createElement(FollowUps, null), "franchisees" === e && React.createElement(FranchiseeTracker, null), "territory" === e && React.createElement(TerritoryManager, null), "calendar" === e && React.createElement(CalendarView, null), "team" === e && React.createElement(TeamManager, null), "board" === e && React.createElement(PhaseBoard, null), "settings" === e && React.createElement(PhaseSettings, null), "leadstages" === e && React.createElement(LeadStageSettings, null), "password" === e && React.createElement(ChangePassword, {
     onDone: () => t("dashboard")
   })), React.createElement("nav", {
     className: "tabbar"
@@ -6801,6 +6841,217 @@ function FranchiseeBoard() {
       m(null), f()
     }
   }))
+}
+
+function LeadStageSettings() {
+  const [rows, setRows] = React.useState(function () {
+    return STAGES.map(function (s, i) {
+      return {
+        key: s.key,
+        label: s.label,
+        color: s.color,
+        sort_order: i
+      };
+    });
+  });
+  const [saving, setSaving] = React.useState(false);
+  const [saved, setSaved] = React.useState(false);
+  const [err, setErr] = React.useState("");
+
+  // editable rows exclude rejected from reordering (kept pinned at end)
+  const editable = rows.filter(function (r) {
+    return r.key !== "rejected";
+  });
+  const rejected = rows.filter(function (r) {
+    return r.key === "rejected";
+  });
+  function update(key, field, val) {
+    setRows(function (rs) {
+      return rs.map(function (r) {
+        return r.key === key ? Object.assign({}, r, {
+          [field]: val
+        }) : r;
+      });
+    });
+    setSaved(false);
+  }
+  function move(idx, dir) {
+    const arr = editable.slice();
+    const j = idx + dir;
+    if (j < 0 || j >= arr.length) return;
+    const tmp = arr[idx];
+    arr[idx] = arr[j];
+    arr[j] = tmp;
+    // reindex sort_order and rebuild full rows (editable order + rejected last)
+    const reordered = arr.map(function (r, i) {
+      return Object.assign({}, r, {
+        sort_order: i
+      });
+    });
+    const rej = rejected.map(function (r) {
+      return Object.assign({}, r, {
+        sort_order: reordered.length
+      });
+    });
+    setRows(reordered.concat(rej));
+    setSaved(false);
+  }
+  async function save() {
+    setSaving(true);
+    setErr("");
+    try {
+      const payload = rows.map(function (r, i) {
+        return {
+          stage_key: r.key,
+          label: r.label,
+          color: r.color,
+          sort_order: r.sort_order != null ? r.sort_order : i
+        };
+      });
+      const {
+        error
+      } = await sb.from("lead_stage_settings").upsert(payload, {
+        onConflict: "stage_key"
+      });
+      if (error) {
+        setErr("Could not save. " + (error.message || ""));
+      } else {
+        // apply live so the rest of the app updates without reload
+        const byKey = {};
+        rows.forEach(function (r) {
+          byKey[r.key] = r;
+        });
+        const merged = STAGE_DEFAULTS.map(function (def) {
+          const o = byKey[def.key];
+          return o ? {
+            key: def.key,
+            label: o.label || def.label,
+            color: o.color || def.color,
+            sort_order: o.sort_order
+          } : Object.assign({}, def);
+        });
+        const ed = merged.filter(function (m) {
+          return m.key !== "rejected";
+        }).sort(function (a, b) {
+          return (a.sort_order || 0) - (b.sort_order || 0);
+        });
+        const rj = merged.filter(function (m) {
+          return m.key === "rejected";
+        });
+        STAGES = ed.concat(rj);
+        setSaved(true);
+      }
+    } catch (e) {
+      setErr("Could not save.");
+    }
+    setSaving(false);
+  }
+  const COLORS = ["#8A8480", "#5B8FD4", "#9B78D4", "#E8B85C", "#CC9C3A", "#E89C5C", "#5FB87A", "#3A7CA5", "#C77B9E", "#0E8074", "#B5561F", "#E05252"];
+  return React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "page-header"
+  }, React.createElement("div", null, React.createElement("div", {
+    className: "page-title"
+  }, "Lead Stages"), React.createElement("div", {
+    className: "page-sub"
+  }, "Rename, recolor, and reorder your pipeline stages"))), React.createElement("div", {
+    className: "content"
+  }, React.createElement("div", {
+    className: "ls-note"
+  }, "Stage names, colors, and order are yours to set. The underlying stages stay the same, so your existing leads are never affected."), React.createElement("div", {
+    className: "ls-list"
+  }, editable.map(function (r, idx) {
+    return React.createElement("div", {
+      key: r.key,
+      className: "ls-row"
+    }, React.createElement("div", {
+      className: "ls-ord"
+    }, React.createElement("button", {
+      className: "ls-arrow",
+      disabled: idx === 0,
+      onClick: function () {
+        move(idx, -1);
+      }
+    }, "\u2191"), React.createElement("button", {
+      className: "ls-arrow",
+      disabled: idx === editable.length - 1,
+      onClick: function () {
+        move(idx, 1);
+      }
+    }, "\u2193")), React.createElement("div", {
+      className: "ls-swatch",
+      style: {
+        background: r.color
+      }
+    }), React.createElement("div", {
+      className: "ls-main"
+    }, React.createElement("input", {
+      className: "ls-input",
+      value: r.label,
+      onChange: function (e) {
+        update(r.key, "label", e.target.value);
+      },
+      placeholder: "Stage name"
+    }), React.createElement("div", {
+      className: "ls-colors"
+    }, COLORS.map(function (c) {
+      return React.createElement("button", {
+        key: c,
+        className: "ls-dot" + (r.color === c ? " on" : ""),
+        style: {
+          background: c
+        },
+        onClick: function () {
+          update(r.key, "color", c);
+        },
+        "aria-label": "color"
+      });
+    }))));
+  }), rejected.map(function (r) {
+    return React.createElement("div", {
+      key: r.key,
+      className: "ls-row ls-row-locked"
+    }, React.createElement("div", {
+      className: "ls-ord ls-ord-empty"
+    }), React.createElement("div", {
+      className: "ls-swatch",
+      style: {
+        background: r.color
+      }
+    }), React.createElement("div", {
+      className: "ls-main"
+    }, React.createElement("input", {
+      className: "ls-input",
+      value: r.label,
+      onChange: function (e) {
+        update(r.key, "label", e.target.value);
+      },
+      placeholder: "Stage name"
+    }), React.createElement("div", {
+      className: "ls-locked-note"
+    }, "Always shown last"), React.createElement("div", {
+      className: "ls-colors"
+    }, COLORS.map(function (c) {
+      return React.createElement("button", {
+        key: c,
+        className: "ls-dot" + (r.color === c ? " on" : ""),
+        style: {
+          background: c
+        },
+        onClick: function () {
+          update(r.key, "color", c);
+        },
+        "aria-label": "color"
+      });
+    }))));
+  })), err ? React.createElement("div", {
+    className: "ls-err"
+  }, err) : null, React.createElement("div", {
+    className: "ls-actions"
+  }, React.createElement("button", {
+    className: "btn btn-primary",
+    onClick: save,
+    disabled: saving
+  }, saving ? "Saving\u2026" : saved ? "Saved \u2713" : "Save changes"))));
 }
 
 function PhaseSettings() {
