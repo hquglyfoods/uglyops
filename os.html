@@ -305,7 +305,7 @@ td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   .tb.on{color:var(--text);}
   .tb.on svg{color:var(--gold-dim);}
   .tb .tbadge{position:absolute;top:-2px;right:calc(50% - 18px);background:var(--red);color:#fff;font-size:8.5px;font-weight:800;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px;}
-  body{overscroll-behavior-y:contain;}
+  
   .content{padding:14px;max-width:100%;}
   .content input,.content select,.content textarea{max-width:100%;width:100%;box-sizing:border-box;min-width:0;}
   /* modal / card inputs must also stay inside their container (iOS date pickers overflow otherwise) */
@@ -338,7 +338,7 @@ td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   .nav-item[data-navkey="dashboard"],.nav-item[data-navkey="board"],.nav-item[data-navkey="followups"],
   .nav-item[data-navkey="leads"],.nav-item[data-navkey="calendar"]{display:none!important;}
 
-  html,body{overflow-x:hidden;max-width:100%;}
+  html{overflow-x:hidden;overflow-x:clip;max-width:100%;}body{overflow-x:hidden;overflow-x:clip;max-width:100%;overflow-y:visible;}
   .app{flex-direction:column;}
   .sidebar{width:100%;height:auto;min-height:0;position:static;border-right:none;border-bottom:none;padding:env(safe-area-inset-top) 12px 0 12px;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
   .sidebar-logo{padding:10px 4px;}
@@ -406,6 +406,42 @@ td{padding:12px 16px;font-size:13px;vertical-align:middle;}
   [style*="repeat(4,1fr)"]{grid-template-columns:1fr!important;}
   [style*="repeat(2,1fr)"]{grid-template-columns:1fr!important;}
 }
+/* === New dashboard (OS) === */
+.dash-label{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:22px 2px 10px;}
+.dash-label-row{display:flex;justify-content:space-between;align-items:center;}
+.dash-link{color:var(--red);font-size:11px;cursor:pointer;font-weight:700;text-transform:none;letter-spacing:0;}
+.dash-hint{font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted);font-size:10.5px;}
+.dash-empty{color:var(--muted);font-size:13px;padding:16px 2px;}
+.fu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+.fu-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;border-left:5px solid var(--muted);display:flex;gap:12px;align-items:flex-start;}
+.fu-card.hot{border-left-color:var(--red);}
+.fu-card.warm{border-left-color:var(--gold);}
+.fu-av{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;background:var(--muted);}
+.fu-card.hot .fu-av{background:var(--red);}
+.fu-card.warm .fu-av{background:var(--gold);}
+.fu-body{flex:1;min-width:0;}
+.fu-nm{font-size:14.5px;font-weight:800;}
+.fu-why{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.4;}
+.fu-chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.fu-chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;}
+.fu-chip.due{background:rgba(190,74,62,.12);color:var(--red);}
+.fu-chip.stage{background:rgba(184,134,11,.14);color:var(--gold);}
+.fu-go{font-size:16px;color:var(--muted);align-self:center;}
+.funnel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;}
+.funnel-stages{display:flex;align-items:flex-end;gap:8px;height:120px;}
+.fstage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer;transition:transform .12s;}
+.fstage:hover{transform:translateY(-3px);}
+.fstage:hover .fbar{filter:brightness(1.08);}
+.fbar{width:100%;border-radius:8px 8px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;color:#fff;font-weight:800;font-size:15px;min-height:18px;}
+.flbl{font-size:10px;color:var(--muted);margin-top:7px;text-transform:uppercase;letter-spacing:.02em;text-align:center;line-height:1.2;}
+.funnel-foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);}
+.funnel-foot b{color:var(--text);font-size:14px;}
+.attn-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+.attn-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;display:flex;gap:11px;align-items:center;}
+.attn-ic{width:34px;height:34px;border-radius:8px;background:rgba(184,134,11,.14);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.attn-nm{font-size:13.5px;font-weight:700;}
+.attn-m{font-size:11.5px;color:var(--muted);margin-top:1px;}
+@media(max-width:760px){.fu-grid,.attn-grid{grid-template-columns:1fr;}.flbl{font-size:8.5px;}}
 </style>
 </head>
 <body>
@@ -1543,20 +1579,20 @@ function Dashboard({
     high: 0,
     active: 0,
     open: 0
-  }), [l, r] = useState([]), [c, o] = useState([]), [s, i] = useState([]), [d, m] = useState([]), [u, p] = useState(null), [g, f] = useState([]), [v, h] = useState(null), [R, E] = useState([]), [y, b] = useState(0);
+  }), [l, r] = useState([]), [c, o] = useState([]), [s, i] = useState([]), [d, m] = useState([]), [u, p] = useState(null), [g, f] = useState([]), [v, h] = useState(null), [R, E] = useState([]), [y, b] = useState(0), [pipeFunnel, setPipeFunnel] = useState([]), [franFunnel, setFranFunnel] = useState([]), [checkIns, setCheckIns] = useState([]);
   useEffect(() => {
     !async function() {
       const e = new Date;
       e.setDate(e.getDate() + 14);
       const t = new Date;
       t.setHours(23, 59, 59, 999);
-      const [a, l, c, s, d, u] = await Promise.all([sb.from("leads").select("id,stage,grade,name,created_at,converted_to_franchisee").order("created_at", {
+      const [a, l, c, s, d, u, ph] = await Promise.all([sb.from("leads").select("id,stage,grade,name,created_at,converted_to_franchisee").order("created_at", {
         ascending: !1
-      }), sb.from("franchisees").select("*").eq("status", "active"), sb.from("franchisee_phase_dates").select("*,franchisees(name,territory),phases(name,color)").lte("due_date", e.toISOString().split("T")[0]).is("completed_at", null).order("due_date"), sb.from("lead_activities").select("*,leads(name)").order("created_at", {
+      }), sb.from("franchisees").select("*,phases(name,color)").eq("status", "active"), sb.from("franchisee_phase_dates").select("*,franchisees(name,territory),phases(name,color)").lte("due_date", e.toISOString().split("T")[0]).is("completed_at", null).order("due_date"), sb.from("lead_activities").select("*,leads(name)").order("created_at", {
         ascending: !1
       }).limit(15), sb.from("leads").select("*").eq("stage", "waiting_for_sign").order("updated_at", {
         ascending: !1
-      }), sb.from("lead_followups").select("*,leads(name,grade)").eq("completed", !1).lte("scheduled_at", t.toISOString()).order("scheduled_at")]), p = a.data || [], g = l.data || [], v = p.filter(e => "rejected" !== e.stage && !e.converted_to_franchisee);
+      }), sb.from("lead_followups").select("*,leads(name,grade)").eq("completed", !1).lte("scheduled_at", t.toISOString()).order("scheduled_at"), sb.from("phases").select("id,name,color,sort_order").order("sort_order")]), p = a.data || [], g = l.data || [], v = p.filter(e => "rejected" !== e.stage && !e.converted_to_franchisee);
       i(v.slice(0, 5)), r(c.data || []), o(s.data || []);
       const h = (d.data || []).map(e => {
         const t = e.fdd_sent_at ? daysUntil(new Date(new Date(e.fdd_sent_at).getTime() + 12096e5).toISOString()) : null;
@@ -1570,7 +1606,32 @@ function Dashboard({
         high: v.filter(e => "high" === e.grade).length,
         active: g.length,
         open: g.filter(e => "open" === e.status).length
-      })
+      });
+      // Pipeline funnel: active leads grouped by stage (fixed STAGES order, excl rejected)
+      (function () {
+        const pipeStages = STAGES.filter(st => "rejected" !== st.key);
+        const counts = {};
+        v.forEach(ld => { counts[ld.stage] = (counts[ld.stage] || 0) + 1; });
+        setPipeFunnel(pipeStages.map(st => ({ key: st.key, label: st.label, color: st.color, count: counts[st.key] || 0 })));
+      })();
+      // Franchise funnel: active franchisees grouped by current phase (real phases, sort_order)
+      (function () {
+        const phases = ph && ph.data ? ph.data : [];
+        const counts = {};
+        g.forEach(fr => { if (fr.current_phase_id) counts[fr.current_phase_id] = (counts[fr.current_phase_id] || 0) + 1; });
+        setFranFunnel(phases.map(p2 => ({ id: p2.id, label: p2.name, color: p2.color || "#9AA6B0", count: counts[p2.id] || 0 })));
+      })();
+      // Needs a check-in: active leads with no activity in 10+ days (approx via created_at fallback)
+      (function () {
+        const now = Date.now();
+        const stuck = v.filter(ld => {
+          const ref = ld.updated_at || ld.created_at;
+          if (!ref) return false;
+          const days = (now - new Date(ref).getTime()) / 864e5;
+          return days >= 10;
+        }).slice(0, 4).map(ld => ({ id: ld.id, name: ld.name, stage: ld.stage, days: Math.floor((now - new Date(ld.updated_at || ld.created_at).getTime()) / 864e5) }));
+        setCheckIns(stuck);
+      })();
     }()
   }, [y]), useEffect(() => {
     v ? async function() {
@@ -1610,534 +1671,175 @@ function Dashboard({
     className: "page-sub"
   }, "Franchise system overview"))), React.createElement("div", {
     className: "content"
-  }, (() => {
-    const a = l.filter(e => daysUntil(e.due_date) <= 7),
-      n = d.filter(e => daysUntil(new Date(new Date(e.fdd_sent_at).getTime() + 12096e5).toISOString().split("T")[0]) <= 3),
-      r = g.length + a.length + n.length,
-      c = ({
-        chip: e,
-        chipCls: t,
-        main: a,
-        sub: n,
-        btn: l,
-        go: r
-      }) => React.createElement("div", {
-        style: {
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          padding: "11px 18px",
-          borderTop: "1px solid var(--line-soft)"
-        }
-      }, React.createElement("span", {
-        style: {
-          flexShrink: 0,
-          width: 68,
-          display: "flex",
-          justifyContent: "flex-start"
-        }
-      }, React.createElement("span", {
-        className: `badge ${t}`,
-        style: {
-          flexShrink: 0,
-          whiteSpace: "nowrap"
-        }
-      }, e)), React.createElement("span", {
-        style: {
-          minWidth: 0,
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          gap: 1
-        }
-      }, React.createElement("span", {
-        style: {
-          fontSize: 13.5,
-          fontWeight: 800,
-          color: "var(--text)",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap"
-        }
-      }, a), n && React.createElement("span", {
-        style: {
-          fontSize: 11.5,
-          color: "var(--muted)",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap"
-        }
-      }, n)), React.createElement("button", {
-        className: "btn btn-primary btn-sm",
-        style: {
-          flexShrink: 0
-        },
-        onClick: r
-      }, l));
-    return React.createElement("div", {
-      className: "card",
-      style: {
-        marginBottom: 20,
-        padding: 0,
-        overflow: "hidden",
-        borderColor: r ? "#EDD9A8" : "var(--border)"
-      }
-    }, React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "14px 18px",
-        background: r ? "linear-gradient(180deg,#FFFDF7,#FFF)" : "#fff"
-      }
-    }, React.createElement("span", {
-      style: {
-        fontWeight: 800,
-        fontSize: 15
-      }
-    }, "Needs your action"), r > 0 ? React.createElement("span", {
-      style: {
-        background: "var(--ink)",
-        color: "var(--ink-gold)",
-        fontSize: 11,
-        fontWeight: 800,
-        borderRadius: 10,
-        padding: "2px 9px"
-      }
-    }, r) : React.createElement("span", {
-      style: {
-        color: "var(--green)",
-        fontSize: 12.5,
-        fontWeight: 700
-      }
-    }, "✓ All clear")), g.slice(0, 4).map(t => {
-      const a = new Date(t.scheduled_at) < new Date((new Date).toDateString());
-      return React.createElement(c, {
-        key: t.id,
-        chip: a ? "Overdue" : "Today",
-        chipCls: a ? "badge-red" : "badge-gold",
-        main: t.leads?.name || "Lead",
-        sub: t.note,
-        btn: "Open",
-        go: () => e("followups")
-      })
-    }), g.length > 4 && React.createElement("div", {
-      style: {
-        padding: "9px 18px",
-        borderTop: "1px solid var(--line-soft)",
-        fontSize: 12.5,
-        color: "var(--muted)"
-      }
-    }, "+ ", g.length - 4, " more follow-ups · ", React.createElement("span", {
-      style: {
-        color: "var(--gold-dim)",
-        fontWeight: 700,
-        cursor: "pointer"
-      },
+  },
+  // FOLLOW UP NOW
+  function () {
+    // Build follow-up items from: overdue/today followups (g), waiting-for-sign (d), high-grade recent leads (s)
+    const items = [];
+    const seen = {};
+    (d || []).forEach(function (ld) {
+      if (seen[ld.id]) return;
+      seen[ld.id] = 1;
+      const expired = ld.days14 != null && ld.days14 < 0;
+      items.push({
+        id: ld.id,
+        name: ld.name || "Lead",
+        hot: true,
+        why: expired ? "Signature window expired. Decide: extend, resend, or drop." : "Waiting for signature. " + (ld.days14 != null ? ld.days14 + " days left in the window." : ""),
+        chips: [{
+          t: expired ? "Expired" : ld.days14 + "d left",
+          c: "due"
+        }, {
+          t: "Awaiting sign",
+          c: "stage"
+        }]
+      });
+    });
+    (g || []).forEach(function (fu) {
+      const lid = fu.lead_id || fu.leads && fu.leads.id;
+      if (lid && seen[lid]) return;
+      if (lid) seen[lid] = 1;
+      const grade = fu.leads && fu.leads.grade;
+      items.push({
+        id: lid,
+        name: fu.leads && fu.leads.name || "Lead",
+        hot: grade === "high",
+        why: fu.note || fu.title || "Follow-up scheduled.",
+        chips: [{
+          t: "Follow-up due",
+          c: "due"
+        }].concat(grade ? [{
+          t: grade,
+          c: "stage"
+        }] : [])
+      });
+    });
+    const list = items.slice(0, 4);
+    return React.createElement(React.Fragment, null, React.createElement("div", {
+      className: "dash-label dash-label-row"
+    }, React.createElement("span", null, "Follow up now"), React.createElement("span", {
+      className: "dash-link",
       onClick: () => e("followups")
-    }, "open Follow-Ups →")), n.map(e => {
-      const a = daysUntil(new Date(new Date(e.fdd_sent_at).getTime() + 12096e5).toISOString().split("T")[0]);
-      return React.createElement(c, {
-        key: e.id,
-        chip: "Sign",
-        chipCls: "badge-red",
-        main: e.name,
-        sub: "FDD window: " + (a < 0 ? "expired" : a + "d left"),
-        btn: "Open",
-        go: () => t(e.id)
-      })
-    }), a.slice(0, 3).map(t => React.createElement(c, {
-      key: t.id,
-      chip: "Phase",
-      chipCls: "badge-gold",
-      main: t.franchisees?.name || "Franchisee",
-      sub: `${t.phases?.name||"Phase"} due ${fmtDate(t.due_date)}`,
-      btn: "Open",
-      go: () => e("calendar")
-    })))
-  })(), React.createElement("div", {
-    className: "card-grid card-grid-2",
-    style: {
-      marginBottom: 24
-    }
+    }, "All follow-ups \u2192")), 0 === list.length ? React.createElement("div", {
+      className: "dash-empty"
+    }, "Nothing to follow up on right now. You're clear.") : React.createElement("div", {
+      className: "fu-grid"
+    }, list.map(function (it, k) {
+      const initials = (it.name || "?").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+      return React.createElement("div", {
+        key: k,
+        className: "fu-card " + (it.hot ? "hot" : "warm"),
+        onClick: it.id ? () => t(it.id) : null,
+        style: {
+          cursor: it.id ? "pointer" : "default"
+        }
+      }, React.createElement("div", {
+        className: "fu-av"
+      }, initials), React.createElement("div", {
+        className: "fu-body"
+      }, React.createElement("div", {
+        className: "fu-nm"
+      }, it.name), React.createElement("div", {
+        className: "fu-why"
+      }, it.why), React.createElement("div", {
+        className: "fu-chips"
+      }, it.chips.map((ch, ci) => React.createElement("span", {
+        key: ci,
+        className: "fu-chip " + ch.c
+      }, ch.t)))), React.createElement("div", {
+        className: "fu-go"
+      }, "\u2192"));
+    })));
+  }(),
+  // PIPELINE HEALTH
+  React.createElement("div", {
+    className: "dash-label dash-label-row"
+  }, React.createElement("span", null, "Pipeline health"), React.createElement("span", {
+    className: "dash-hint"
+  }, "tap a stage to open it")), React.createElement("div", {
+    className: "funnel"
   }, React.createElement("div", {
-    className: "card",
-    style: {
-      cursor: "pointer"
-    },
-    onClick: () => h("leads")
+    className: "funnel-stages"
+  }, function () {
+    const max = Math.max(1, ...(pipeFunnel || []).map(x => x.count));
+    return (pipeFunnel || []).map(function (st, k) {
+      const h = Math.max(14, Math.round(st.count / max * 100));
+      return React.createElement("div", {
+        key: k,
+        className: "fstage",
+        onClick: () => {
+          window.__dashStage = st.key;
+          e("leads");
+        }
+      }, React.createElement("div", {
+        className: "fbar",
+        style: {
+          height: h + "%",
+          background: st.color
+        }
+      }, st.count), React.createElement("div", {
+        className: "flbl"
+      }, st.label));
+    });
+  }()), React.createElement("div", {
+    className: "funnel-foot"
+  }, React.createElement("span", null, React.createElement("b", null, a.leads), " active leads"), React.createElement("span", null, React.createElement("b", null, a.high), " high priority"), React.createElement("span", null, React.createElement("b", null, (pipeFunnel || []).filter(x => "agreement_signed" === x.key).reduce((s2, x) => s2 + x.count, 0)), " signed"))),
+  // FRANCHISE HEALTH
+  React.createElement("div", {
+    className: "dash-label dash-label-row"
+  }, React.createElement("span", null, "Franchise health"), React.createElement("span", {
+    className: "dash-hint"
+  }, "signed to open \u00B7 tap a stage")), 0 === (franFunnel || []).length ? React.createElement("div", {
+    className: "dash-empty"
+  }, "No active franchises in a build phase yet.") : React.createElement("div", {
+    className: "funnel"
   }, React.createElement("div", {
-    className: "stat-label"
-  }, "Active Leads"), React.createElement("div", {
-    className: "stat-value gold"
-  }, a.leads), React.createElement("div", {
-    className: "stat-sub"
-  }, a.high, " high priority")), React.createElement("div", {
-    className: "card"
-  }, React.createElement("div", {
-    className: "stat-label"
-  }, "Due This Week"), React.createElement("div", {
-    className: "stat-value",
-    style: {
-      color: l.filter(e => daysUntil(e.due_date) <= 7).length > 0 ? "var(--orange)" : "var(--text)"
-    }
-  }, l.filter(e => daysUntil(e.due_date) <= 7).length), React.createElement("div", {
-    className: "stat-sub"
-  }, "Phase milestones"))), d.length > 0 && React.createElement("div", {
-    style: {
-      background: "rgba(204,156,58,.08)",
-      border: "1px solid rgba(204,156,58,.3)",
-      borderRadius: 10,
-      padding: "12px 16px",
-      marginBottom: 20
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 12,
-      fontWeight: 700,
-      color: "var(--gold)",
-      marginBottom: 8,
-      letterSpacing: ".06em",
-      textTransform: "uppercase"
-    }
-  }, "Awaiting Signature · 14-Day Window"), d.map(e => {
-    const t = new Date(new Date(e.fdd_sent_at).getTime() + 12096e5),
-      a = daysUntil(t.toISOString());
+    className: "funnel-stages"
+  }, function () {
+    const max = Math.max(1, ...(franFunnel || []).map(x => x.count));
+    return (franFunnel || []).map(function (st, k) {
+      const h = Math.max(14, Math.round(st.count / max * 100));
+      return React.createElement("div", {
+        key: k,
+        className: "fstage",
+        onClick: () => {
+          window.__dashPhase = st.id;
+          e("active");
+        }
+      }, React.createElement("div", {
+        className: "fbar",
+        style: {
+          height: h + "%",
+          background: st.color
+        }
+      }, st.count), React.createElement("div", {
+        className: "flbl"
+      }, st.label));
+    });
+  }()), React.createElement("div", {
+    className: "funnel-foot"
+  }, React.createElement("span", null, React.createElement("b", null, a.active), " in progress"), React.createElement("span", null, React.createElement("b", null, a.open), " open & operating"))),
+  // NEEDS A CHECK-IN
+  (checkIns || []).length > 0 ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "dash-label"
+  }, "Needs a check-in"), React.createElement("div", {
+    className: "attn-grid"
+  }, (checkIns || []).map(function (ci, k) {
     return React.createElement("div", {
-      key: e.id,
-      onClick: () => p(e),
+      key: k,
+      className: "attn-card",
+      onClick: () => t(ci.id),
       style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "8px 6px",
-        borderBottom: "1px solid rgba(204,156,58,.15)",
-        cursor: "pointer",
-        borderRadius: 8,
-        transition: "background .12s"
-      },
-      onMouseEnter: e => e.currentTarget.style.background = "rgba(204,156,58,.10)",
-      onMouseLeave: e => e.currentTarget.style.background = "transparent"
-    }, React.createElement("span", {
-      style: {
-        fontSize: 13,
-        fontWeight: 700,
-        flex: 1,
-        minWidth: 0,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-      }
-    }, e.name), React.createElement("span", {
-      className: "fdd-terr",
-      style: {
-        fontSize: 12,
-        color: "var(--muted)"
-      }
-    }, e.territory_interest || parseTerritories(e.territories).map(e => e.name || e).join(", ")), React.createElement("span", {
-      style: {
-        fontSize: 12,
-        fontWeight: 800,
-        whiteSpace: "nowrap",
-        color: a <= 0 ? "var(--red)" : a <= 3 ? "var(--orange)" : "var(--gold)"
-      }
-    }, a <= 0 ? "EXPIRED" : 1 === a ? "1 day left" : `${a} days left`), React.createElement("span", {
-      className: "fdd-date",
-      style: {
-        fontSize: 11,
-        color: "var(--muted)",
-        whiteSpace: "nowrap"
-      }
-    }, "by ", fmtDate(t)), React.createElement("span", {
-      style: {
-        fontSize: 13,
-        color: "var(--gold)",
-        fontWeight: 800,
-        flexShrink: 0
-      }
-    }, "›"))
-  })), React.createElement("div", {
-    className: "card-grid card-grid-2"
-  }, React.createElement("div", null, React.createElement("div", {
-    className: "card",
-    style: {
-      marginBottom: 16
-    }
-  }, React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      marginBottom: 16,
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center"
-    }
-  }, "Upcoming Phase Due Dates", React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    onClick: () => e("calendar")
-  }, "Calendar")), 0 === l.length && React.createElement("div", {
-    style: {
-      color: "var(--muted)",
-      fontSize: 13
-    }
-  }, "No upcoming due dates."), l.slice(0, 5).map(e => {
-    const t = daysUntil(e.due_date);
-    return React.createElement("div", {
-      key: e.id,
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "8px 0",
-        borderBottom: "1px solid var(--border)"
+        cursor: "pointer"
       }
     }, React.createElement("div", {
-      style: {
-        width: 8,
-        height: 8,
-        borderRadius: "50%",
-        background: e.phases?.color || "var(--gold)",
-        flexShrink: 0
-      }
-    }), React.createElement("div", {
-      style: {
-        flex: 1
-      }
-    }, React.createElement("div", {
-      style: {
-        fontSize: 13,
-        fontWeight: 600
-      }
-    }, e.franchisees?.name), React.createElement("div", {
-      style: {
-        fontSize: 11,
-        color: "var(--muted)"
-      }
-    }, e.phases?.name, " · ", e.franchisees?.territory)), React.createElement("div", {
-      style: {
-        textAlign: "right"
-      }
-    }, React.createElement("div", {
-      style: {
-        fontSize: 12,
-        color: t < 0 ? "var(--red)" : t <= 3 ? "var(--orange)" : "var(--muted)"
-      }
-    }, fmtDate(e.due_date)), React.createElement("div", {
-      style: {
-        fontSize: 11,
-        color: t < 0 ? "var(--red)" : t <= 3 ? "var(--orange)" : "var(--muted2)"
-      }
-    }, t < 0 ? `${Math.abs(t)}d overdue` : 0 === t ? "Today" : 1 === t ? "Tomorrow" : `${t}d`)))
-  })), React.createElement("div", {
-    className: "card"
-  }, React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      marginBottom: 16,
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center"
-    }
-  }, "Recent Leads", React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    onClick: () => e("leads")
-  }, "See all")), s.map(e => React.createElement("div", {
-    key: e.id,
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      padding: "8px 0",
-      borderBottom: "1px solid var(--border)"
-    }
-  }, React.createElement("span", {
-    className: `badge badge-${e.grade}`
-  }, e.grade), React.createElement("span", {
-    style: {
-      flex: 1,
-      fontSize: 13
-    }
-  }, e.name), React.createElement("span", {
-    className: "stage-pill",
-    style: stageStyle(e.stage)
-  }, stageLabel(e.stage)))))), React.createElement("div", {
-    className: "card",
-    style: {
-      maxHeight: 480,
-      overflowY: "auto"
-    }
-  }, React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      marginBottom: 16,
-      fontSize: 15
-    }
-  }, "Activity Feed"), 0 === c.length && React.createElement("div", {
-    style: {
-      color: "var(--muted)",
-      fontSize: 13
-    }
-  }, "No activity yet."), c.map(e => React.createElement("div", {
-    key: e.id,
-    style: {
-      display: "flex",
-      gap: 10,
-      padding: "9px 0",
-      borderBottom: "1px solid var(--border)"
-    }
-  }, React.createElement("div", {
-    style: {
-      width: 26,
-      height: 26,
-      borderRadius: "50%",
-      background: "var(--panel2)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 12,
-      flexShrink: 0,
-      marginTop: 1
-    }
-  }, _[e.activity_type] || "◎"), React.createElement("div", null, React.createElement("div", {
-    style: {
-      fontSize: 13
-    }
-  }, React.createElement("span", {
-    style: {
-      fontWeight: 600
-    }
-  }, e.leads?.name), " — ", e.description), React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: "var(--muted)",
-      marginTop: 2
-    }
-  }, e.performed_by, " · ", fmtDateTime(e.created_at)))))))), v && React.createElement("div", {
-    className: "modal-overlay",
-    onClick: e => e.target === e.currentTarget && h(null)
-  }, React.createElement("div", {
-    className: "modal modal-lg"
-  }, React.createElement("div", {
-    className: "modal-header"
-  }, React.createElement("div", {
-    className: "modal-title"
-  }, "leads" === v && `Active Leads (${R.length})`, "active" === v && `In Development (${R.length})`, "open" === v && `Stores Open (${R.length})`), React.createElement("button", {
-    className: "close-btn",
-    onClick: () => h(null)
-  }, "×")), React.createElement("div", {
-    className: "modal-body"
-  }, "leads" === v && React.createElement("div", null, R.map(e => React.createElement("div", {
-    key: e.id,
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      padding: "10px 0",
-      borderBottom: "1px solid var(--border)"
-    }
-  }, React.createElement("span", {
-    className: `badge badge-${e.grade}`
-  }, e.grade), React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 600
-    }
-  }, e.name), React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: "var(--muted)",
-      marginTop: 2
-    }
-  }, e.email, " · ", parseTerritories(e.territories).map(e => e.name || e).join(", ") || e.territory_interest || "—")), React.createElement("span", {
-    className: "stage-pill",
-    style: stageStyle(e.stage)
-  }, stageLabel(e.stage)), React.createElement("span", {
-    style: {
-      fontSize: 11,
-      color: "var(--muted)"
-    }
-  }, fmtDate(e.created_at)))), 0 === R.length && React.createElement("div", {
-    style: {
-      color: "var(--muted)",
-      textAlign: "center",
-      padding: "30px 0"
-    }
-  }, "No active leads.")), ("active" === v || "open" === v) && React.createElement("div", null, R.map(e => React.createElement("div", {
-    key: e.id,
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      padding: "10px 0",
-      borderBottom: "1px solid var(--border)"
-    }
-  }, React.createElement("div", {
-    style: {
-      width: 10,
-      height: 10,
-      borderRadius: "50%",
-      background: e.phases?.color || "var(--gold)",
-      flexShrink: 0
-    }
-  }), React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 13,
-      fontWeight: 600
-    }
-  }, e.store_name || e.name, e.store_name && React.createElement("span", {
-    style: {
-      fontSize: 11,
-      color: "var(--muted)",
-      marginLeft: 6
-    }
-  }, "(", e.name, ")")), React.createElement("div", {
-    style: {
-      fontSize: 11,
-      color: "var(--muted)",
-      marginTop: 2
-    }
-  }, e.territory, " · ", e.entity_name || "No entity")), React.createElement("div", {
-    style: {
-      textAlign: "right"
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: e.phases?.color || "var(--gold)",
-      fontWeight: 600
-    }
-  }, e.phases?.name || "—"), e.email && React.createElement("a", {
-    href: `mailto:${e.email}`,
-    style: {
-      fontSize: 11,
-      color: "var(--blue)",
-      textDecoration: "none"
-    }
-  }, "✉ Email")))), 0 === R.length && React.createElement("div", {
-    style: {
-      color: "var(--muted)",
-      textAlign: "center",
-      padding: "30px 0"
-    }
-  }, "None yet."))), React.createElement("div", {
-    className: "modal-footer"
-  }, React.createElement("button", {
-    className: "btn btn-ghost",
-    onClick: () => h(null)
-  }, "Close")))), u && React.createElement(LeadModal, {
-    lead: u,
-    allLeads: d,
-    onClose: () => {
-      p(null), b(e => e + 1)
-    }
-  }))
+      className: "attn-ic"
+    }, "\u25F4"), React.createElement("div", null, React.createElement("div", {
+      className: "attn-nm"
+    }, ci.name), React.createElement("div", {
+      className: "attn-m"
+    }, "Quiet for " + ci.days + " days \u00B7 " + stageLabel(ci.stage))));
+  }))) : null));
 }
 
 function TerritoryManager() {

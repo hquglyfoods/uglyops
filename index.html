@@ -351,7 +351,7 @@ body.modal-open{overflow:hidden;}
   /* mobile: tabbar + More sheet cover the full HQ nav */
   .hq-nav{display:none!important;}
   .portal-nav{display:none!important;}
-  body{overscroll-behavior-y:contain;}
+  
   .btn-sm{min-height:38px;}
   .progress-bar{height:10px;border-radius:6px;}
   .stat-value{font-size:26px;}
@@ -383,7 +383,7 @@ body.modal-open{overflow:hidden;}
   .task-card-title{font-size:15px;}
   .kmenu{right:0;}
 
-  html,body{overflow-x:hidden;max-width:100%;}
+  html{overflow-x:hidden;overflow-x:clip;max-width:100%;}body{overflow-x:hidden;overflow-x:clip;max-width:100%;overflow-y:visible;}
   .auth-wrap{padding:16px;}
   .auth-card{width:100%!important;max-width:400px;padding:28px 22px;}
   .bot-msgs{padding:14px 16px!important;}
@@ -465,6 +465,42 @@ body.modal-open{overflow:hidden;}
   .card-grid-4{grid-template-columns:1fr;}
   [style*="repeat(4,1fr)"]{grid-template-columns:1fr!important;}
 }
+/* === New dashboard === */
+.dash-label{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:22px 2px 10px;}
+.dash-label:first-child{margin-top:4px;}
+.act-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.act-card{border-radius:14px;padding:16px;border:1px solid var(--border);background:var(--panel);display:flex;flex-direction:column;gap:8px;min-height:118px;position:relative;}
+.act-card.red{background:rgba(190,74,62,.09);border-color:rgba(190,74,62,.28);}
+.act-card.amber{background:rgba(184,134,11,.10);border-color:rgba(184,134,11,.30);}
+.act-card.green{background:rgba(46,125,79,.09);border-color:rgba(46,125,79,.26);}
+.act-top{display:flex;align-items:center;gap:9px;}
+.act-ic{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;flex-shrink:0;background:var(--muted);}
+.act-card.red .act-ic{background:var(--red);}
+.act-card.amber .act-ic{background:var(--gold);}
+.act-card.green .act-ic{background:var(--green);}
+.act-cnt{font-size:32px;font-weight:800;line-height:1;letter-spacing:-.02em;}
+.act-ttl{font-size:13px;font-weight:700;}
+.act-desc{font-size:12px;color:var(--muted);line-height:1.45;margin-top:auto;}
+.act-go{position:absolute;top:14px;right:14px;font-size:16px;color:var(--muted);}
+.store-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.store-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:15px;border-left:5px solid var(--muted);}
+.store-card.g{border-left-color:var(--green);}
+.store-card.a{border-left-color:var(--gold);}
+.store-card.r{border-left-color:var(--red);}
+.store-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.store-nm{font-size:15px;font-weight:800;}
+.store-lc{font-size:11px;color:var(--muted);}
+.store-light{width:11px;height:11px;border-radius:50%;margin-top:4px;background:var(--muted);}
+.store-card.g .store-light{background:var(--green);}
+.store-card.a .store-light{background:var(--gold);}
+.store-card.r .store-light{background:var(--red);}
+.store-ring-wrap{display:flex;align-items:center;gap:12px;}
+.store-ring{width:58px;height:58px;flex-shrink:0;}
+.store-stat{font-size:11.5px;color:var(--muted);line-height:1.5;}
+.store-stat b{color:var(--text);}
+.store-flag{color:var(--red);font-weight:700;}
+.dash-empty{color:var(--muted);font-size:13px;padding:20px 2px;}
+@media(max-width:760px){.act-grid{grid-template-columns:1fr;}.store-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -3039,780 +3075,165 @@ function Dashboard({
       }
     }(): b([])
   }, [p]), React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "page-header"
+  className: "page-header"
+}, React.createElement("div", null, React.createElement("div", {
+  className: "page-title"
+}, "Ops Dashboard"), React.createElement("div", {
+  className: "page-sub"
+}, "Open store task management")), React.createElement("div", {
+  style: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap"
+  }
+}, React.createElement("button", {
+  className: "btn btn-ghost btn-sm",
+  onClick: () => a("anmt")
+}, "+ Announcement"), React.createElement("button", {
+  className: "btn btn-primary btn-sm",
+  onClick: () => a("task")
+}, "+ Task"))), React.createElement("div", {
+  className: "content"
+},
+// ACT NOW
+React.createElement("div", {
+  className: "dash-label"
+}, "Act now"), React.createElement("div", {
+  className: "act-grid"
+}, function () {
+  const reviewN = (g.submitted || []).length;
+  const dueN = r.activeTasks || 0;
+  const overdue = 0;
+  const cards = [];
+  cards.push(React.createElement("div", {
+    key: "rev",
+    className: "act-card " + (reviewN > 0 ? "red" : "green"),
+    onClick: reviewN > 0 ? () => e("review") : null,
+    style: {
+      cursor: reviewN > 0 ? "pointer" : "default"
+    }
+  }, reviewN > 0 ? React.createElement("div", {
+    className: "act-go"
+  }, "\u2192") : null, React.createElement("div", {
+    className: "act-top"
+  }, React.createElement("div", {
+    className: "act-ic"
+  }, reviewN > 0 ? "\u2691" : "\u2713"), React.createElement("div", {
+    className: "act-cnt"
+  }, reviewN)), React.createElement("div", {
+    className: "act-ttl"
+  }, reviewN === 1 ? "Submission to review" : "Submissions to review"), React.createElement("div", {
+    className: "act-desc"
+  }, reviewN > 0 ? "Approve or send back what stores submitted." : "Nothing waiting on you.")));
+  cards.push(React.createElement("div", {
+    key: "due",
+    className: "act-card " + (dueN > 0 ? "amber" : "green"),
+    onClick: () => e("tasks"),
+    style: {
+      cursor: "pointer"
+    }
+  }, React.createElement("div", {
+    className: "act-go"
+  }, "\u2192"), React.createElement("div", {
+    className: "act-top"
+  }, React.createElement("div", {
+    className: "act-ic"
+  }, "\u25F7"), React.createElement("div", {
+    className: "act-cnt"
+  }, dueN)), React.createElement("div", {
+    className: "act-ttl"
+  }, dueN === 1 ? "Open task" : "Open tasks"), React.createElement("div", {
+    className: "act-desc"
+  }, dueN > 0 ? "Tasks stores are still working on." : "No open tasks right now.")));
+  const msgs = g.unreadMsgs || 0;
+  cards.push(React.createElement("div", {
+    key: "msg",
+    className: "act-card " + (msgs > 0 ? "amber" : "green"),
+    onClick: msgs > 0 ? () => e("messages") : null,
+    style: {
+      cursor: msgs > 0 ? "pointer" : "default"
+    }
+  }, msgs > 0 ? React.createElement("div", {
+    className: "act-go"
+  }, "\u2192") : null, React.createElement("div", {
+    className: "act-top"
+  }, React.createElement("div", {
+    className: "act-ic"
+  }, msgs > 0 ? "\u2709" : "\u2713"), React.createElement("div", {
+    className: "act-cnt"
+  }, msgs)), React.createElement("div", {
+    className: "act-ttl"
+  }, msgs === 1 ? "Unread message" : "Unread messages"), React.createElement("div", {
+    className: "act-desc"
+  }, msgs > 0 ? "Stores are waiting to hear back." : "No unread store messages.")));
+  return cards;
+}()),
+// STORE STATUS
+React.createElement("div", {
+  className: "dash-label"
+}, "Store status"), 0 === (i || []).length ? React.createElement("div", {
+  className: "dash-empty"
+}, "No open stores yet.") : React.createElement("div", {
+  className: "store-grid"
+}, (i || []).map(function (st) {
+  const pct = st.pct || 0;
+  const cls = pct >= 85 ? "g" : pct >= 60 ? "a" : "r";
+  const col = pct >= 85 ? "var(--green)" : pct >= 60 ? "var(--gold-deep)" : "var(--red)";
+  const dash = Math.max(0, Math.min(100, pct));
+  return React.createElement("div", {
+    key: st.id,
+    className: "store-card " + cls,
+    onClick: () => e("stores"),
+    style: {
+      cursor: "pointer"
+    }
+  }, React.createElement("div", {
+    className: "store-head"
   }, React.createElement("div", null, React.createElement("div", {
-    className: "page-title"
-  }, "Ops Dashboard"), React.createElement("div", {
-    className: "page-sub"
-  }, "Open store task management")), React.createElement("div", {
-    className: "hdr-actions",
-    style: {
-      display: "flex",
-      gap: 8
-    }
-  }, React.createElement("button", {
-    className: "btn btn-ghost",
-    onClick: () => a ? a("anmt") : e("announce")
-  }, "+ New announcement"), React.createElement("button", {
-    className: "btn btn-ghost",
-    onClick: () => a ? a("task") : e("broadcast")
-  }, "+ New task"))), React.createElement("div", {
-    className: "content"
-  }, (() => {
-    const a = g.submitted.length + (g.unreadMsgs ? 1 : 0) + (g.warnToReview ? 1 : 0);
-    return React.createElement("div", {
-      className: "card",
-      style: {
-        marginBottom: 20,
-        padding: 0,
-        overflow: "hidden",
-        borderColor: a ? "#EDD9A8" : "var(--border)"
-      }
-    }, React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "14px 18px",
-        borderBottom: a ? "1px solid var(--line-soft, #F2EDE1)" : "none",
-        background: a ? "linear-gradient(180deg,#FFFDF7,#FFF)" : "#fff"
-      }
-    }, React.createElement("span", {
-      style: {
-        fontWeight: 800,
-        fontSize: 15
-      }
-    }, "Needs your action"), a > 0 ? React.createElement("span", {
-      style: {
-        background: "var(--ink,#14201E)",
-        color: "var(--ink-gold,#F0D68A)",
-        fontSize: 11,
-        fontWeight: 800,
-        borderRadius: 10,
-        padding: "2px 9px"
-      }
-    }, g.submitted.length + g.unreadMsgs + g.warnToReview) : React.createElement("span", {
-      style: {
-        color: "var(--green)",
-        fontSize: 12.5,
-        fontWeight: 700
-      }
-    }, "✓ All clear")), g.submitted.slice(0, 5).map(a => React.createElement("div", {
-      key: a.id,
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "11px 18px",
-        borderBottom: "1px solid #F2EDE1"
-      }
-    }, React.createElement("span", {
-      className: "badge badge-gold",
-      style: {
-        flex: "none"
-      }
-    }, "Review"), React.createElement("span", {
-      style: {
-        minWidth: 0,
-        display: "flex",
-        flexDirection: "column",
-        gap: 1
-      }
-    }, React.createElement("span", {
-      style: {
-        fontSize: 13.5,
-        fontWeight: 700,
-        color: "var(--text)",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-      }
-    }, a.store), React.createElement("span", {
-      style: {
-        fontSize: 11.5,
-        color: "var(--muted)",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap"
-      }
-    }, a.task)), React.createElement("span", {
-      style: {
-        marginLeft: "auto",
-        flex: "none",
-        fontSize: 11,
-        color: "var(--muted2)"
-      }
-    }, (e => {
-      if (!e) return "";
-      const t = Math.max(0, Math.round((Date.now() - new Date(e)) / 36e5));
-      return t < 1 ? "just now" : t < 24 ? t + "h ago" : Math.round(t / 24) + "d ago"
-    })(a.when)), React.createElement("button", {
-      className: "btn btn-primary btn-sm",
-      style: {
-        flex: "none"
-      },
-      onClick: () => t ? t(a.id) : e("review")
-    }, "Review"))), g.submitted.length > 5 && React.createElement("div", {
-      style: {
-        padding: "9px 18px",
-        borderBottom: "1px solid #F2EDE1",
-        fontSize: 12.5,
-        color: "var(--muted)"
-      }
-    }, "+ ", g.submitted.length - 5, " more waiting · ", React.createElement("span", {
-      style: {
-        color: "var(--gold-dim)",
-        fontWeight: 700,
-        cursor: "pointer"
-      },
-      onClick: () => e("review")
-    }, "open HQ Review →")), g.unreadMsgs > 0 && React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "11px 18px",
-        borderBottom: "1px solid #F2EDE1"
-      }
-    }, React.createElement("span", {
-      className: "badge badge-gold",
-      style: {
-        flex: "none"
-      }
-    }, "Reply"), React.createElement("span", {
-      style: {
-        fontSize: 13.5,
-        fontWeight: 700
-      }
-    }, "Store messages"), React.createElement("span", {
-      style: {
-        fontSize: 11.5,
-        color: "var(--muted)"
-      }
-    }, g.unreadMsgs, " unread"), React.createElement("button", {
-      className: "btn btn-primary btn-sm",
-      style: {
-        marginLeft: "auto",
-        flex: "none"
-      },
-      onClick: () => e("messages")
-    }, "Open")), g.warnToReview > 0 && React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "11px 18px"
-      }
-    }, React.createElement("span", {
-      className: "badge badge-red",
-      style: {
-        flex: "none"
-      }
-    }, "Respond"), React.createElement("span", {
-      style: {
-        fontSize: 13.5,
-        fontWeight: 700
-      }
-    }, "Warning responses"), React.createElement("span", {
-      style: {
-        fontSize: 11.5,
-        color: "var(--muted)"
-      }
-    }, g.warnToReview, " waiting"), React.createElement("button", {
-      className: "btn btn-primary btn-sm",
-      style: {
-        marginLeft: "auto",
-        flex: "none"
-      },
-      onClick: () => e("warnings")
-    }, "Open")))
-  })(), React.createElement("div", {
-    className: "card-grid-4",
-    style: {
-      marginBottom: 24
-    }
-  }, React.createElement("div", {
-    className: "card stat-tap",
-    style: {
-      cursor: "pointer",
-      position: "relative"
-    },
-    onClick: () => u("stores")
-  }, React.createElement("span", {
-    className: "stat-chev"
-  }, "›"), React.createElement("div", {
-    className: "stat-label"
-  }, "Open Stores"), React.createElement("div", {
-    className: "stat-value"
-  }, r.stores)), React.createElement("div", {
-    className: "card stat-tap",
-    style: {
-      cursor: "pointer",
-      position: "relative"
-    },
-    onClick: () => u("tasks")
-  }, React.createElement("span", {
-    className: "stat-chev"
-  }, "›"), React.createElement("div", {
-    className: "stat-label"
-  }, "Open Tasks"), React.createElement("div", {
-    className: "stat-value"
-  }, r.activeTasks)), React.createElement("div", {
-    className: "card stat-tap",
-    style: {
-      cursor: "pointer",
-      position: "relative"
-    },
-    onClick: () => n && n()
-  }, React.createElement("span", {
-    className: "stat-chev"
-  }, "›"), React.createElement("div", {
-    className: "stat-label"
-  }, "Open Announcements"), React.createElement("div", {
-    className: "stat-value",
-    style: {
-      color: r.openAnnouncements > 0 ? "var(--gold-dim)" : "var(--text)"
-    }
-  }, r.openAnnouncements)), React.createElement("div", {
-    className: "card stat-tap",
-    style: {
-      cursor: "pointer",
-      position: "relative"
-    },
-    onClick: () => u("pending")
-  }, React.createElement("span", {
-    className: "stat-chev"
-  }, "›"), React.createElement("div", {
-    className: "stat-label"
-  }, "Pending Review"), React.createElement("div", {
-    className: "stat-value",
-    style: {
-      color: r.pending > 0 ? "var(--gold-dim)" : "var(--text)"
-    }
-  }, r.pending))), React.createElement("div", {
-    className: "card",
-    style: {
-      marginBottom: 16
-    }
-  }, React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      marginBottom: 16,
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center"
-    }
-  }, React.createElement("span", {
-    style: {
-      display: "flex",
-      alignItems: "center"
-    }
-  }, React.createElement("span", {
-    style: {
-      width: 26,
-      height: 26,
-      borderRadius: 8,
-      background: "#E8F0FA",
-      color: "#2C5F9E",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-      marginRight: 10
-    }
-  }, React.createElement("svg", {
-    width: "14",
-    height: "14",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2.2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    viewBox: "0 0 24 24"
-  }, React.createElement("path", {
-    d: "M9 6h11M9 12h11M9 18h11"
-  }), React.createElement("circle", {
-    cx: "4.5",
-    cy: "6",
-    r: "1.5"
-  }), React.createElement("circle", {
-    cx: "4.5",
-    cy: "12",
-    r: "1.5"
-  }), React.createElement("circle", {
-    cx: "4.5",
-    cy: "18",
-    r: "1.5"
-  }))), "Task Completion"), React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    onClick: () => e("tasks")
-  }, "See all →")), 0 === l.length && React.createElement("div", {
-    style: {
-      color: "var(--muted)",
-      fontSize: 13
-    }
-  }, "No active tasks yet."), l.map(e => {
-    const t = daysUntil(e.due_date);
-    return React.createElement("div", {
-      key: e.id,
-      style: {
-        marginBottom: 14,
-        paddingBottom: 14,
-        borderBottom: "1px solid var(--border)"
-      }
-    }, React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        marginBottom: 6
-      }
-    }, React.createElement("span", {
-      className: `cat-badge cat-${e.category}`
-    }, catLabel(e.category)), React.createElement("span", {
-      style: {
-        flex: 1,
-        fontSize: 13,
-        fontWeight: 600
-      }
-    }, e.title), React.createElement("div", {
-      style: {
-        display: "flex",
-        gap: 8,
-        alignItems: "center",
-        flexShrink: 0
-      }
-    }, e.submitted > 0 && React.createElement("span", {
-      className: "badge badge-gold"
-    }, e.submitted), null !== t && t <= 3 && e.pct < 100 && React.createElement("span", {
-      style: {
-        fontSize: 11,
-        fontWeight: 700,
-        color: t < 0 ? "var(--red)" : "var(--gold-dim)",
-        whiteSpace: "nowrap"
-      }
-    }, t < 0 ? `${Math.abs(t)}d late` : 0 === t ? "today" : `${t}d`), React.createElement("span", {
-      style: {
-        fontSize: 12.5,
-        fontWeight: 800,
-        color: 100 === e.pct ? "var(--green)" : "var(--text)",
-        minWidth: 40,
-        textAlign: "right",
-        fontVariantNumeric: "tabular-nums"
-      }
-    }, e.approved, React.createElement("span", {
-      style: {
-        color: "var(--muted2)",
-        fontWeight: 600
-      }
-    }, "/", e.total)))), React.createElement("div", {
-      className: "progress-bar"
-    }, React.createElement("div", {
-      className: "progress-fill",
-      style: {
-        width: `${e.pct}%`,
-        background: 100 === e.pct ? "var(--green)" : "linear-gradient(90deg,#CC9C3A,#E3BE64)"
-      }
-    })))
+    className: "store-nm"
+  }, st.store_name || st.name || "Store"), React.createElement("div", {
+    className: "store-lc"
+  }, st.territory || "")), React.createElement("div", {
+    className: "store-light"
   })), React.createElement("div", {
-    className: "card"
-  }, React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      marginBottom: 14,
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center"
-    }
-  }, React.createElement("span", {
-    style: {
-      display: "flex",
-      alignItems: "center"
-    }
-  }, React.createElement("span", {
-    style: {
-      width: 26,
-      height: 26,
-      borderRadius: 8,
-      background: "#F7EEDA",
-      color: "#8A6614",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-      marginRight: 10
-    }
+    className: "store-ring-wrap"
   }, React.createElement("svg", {
-    width: "14",
-    height: "14",
+    className: "store-ring",
+    viewBox: "0 0 36 36"
+  }, React.createElement("circle", {
+    cx: "18",
+    cy: "18",
+    r: "15.9",
     fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2.2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    viewBox: "0 0 24 24"
-  }, React.createElement("path", {
-    d: "M3 11l18-7-4 16-6-4-3 4-1-6z"
-  }))), "Announcement Confirmations"), React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    onClick: () => n && n()
-  }, "Manage →")), 0 === d.length && React.createElement("div", {
-    style: {
-      color: "var(--muted)",
-      fontSize: 13
-    }
-  }, "No active announcements."), d.map(e => React.createElement("div", {
-    key: e.id,
-    style: {
-      marginBottom: 14,
-      paddingBottom: 14,
-      borderBottom: "1px solid var(--border)"
-    }
-  }, React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10,
-      marginBottom: 6
-    }
-  }, React.createElement("span", {
-    style: {
-      flex: 1,
-      fontSize: 13,
-      fontWeight: 600
-    }
-  }, e.title), React.createElement("span", {
-    style: {
-      fontSize: 12,
-      fontWeight: 700,
-      color: 100 === e.pct ? "var(--green)" : e.pct > 50 ? "var(--gold)" : "var(--muted)",
-      minWidth: 36,
-      textAlign: "right"
-    }
-  }, e.pct, "%")), React.createElement("div", {
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 10
-    }
-  }, React.createElement("div", {
-    className: "progress-bar",
-    style: {
-      flex: 1
-    }
-  }, React.createElement("div", {
-    className: "progress-fill",
-    style: {
-      width: `${e.pct}%`,
-      background: 100 === e.pct ? "var(--green)" : "var(--orange)"
-    }
-  })), React.createElement("span", {
-    style: {
-      fontSize: 11,
-      color: "var(--muted)",
-      whiteSpace: "nowrap"
-    }
-  }, e.confirmed, "/", e.total, " confirmed")))))), React.createElement("div", {
-    className: "card",
-    style: {
-      marginTop: 16
-    }
-  }, React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      marginBottom: 14,
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center"
-    }
-  }, React.createElement("span", {
-    style: {
-      display: "flex",
-      alignItems: "center"
-    }
-  }, React.createElement("span", {
-    style: {
-      width: 26,
-      height: 26,
-      borderRadius: 8,
-      background: "#E8F4EC",
-      color: "#2E7D4F",
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-      marginRight: 10
-    }
-  }, React.createElement("svg", {
-    width: "14",
-    height: "14",
+    stroke: "var(--panel2)",
+    strokeWidth: "4"
+  }), React.createElement("circle", {
+    cx: "18",
+    cy: "18",
+    r: "15.9",
     fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2.2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    viewBox: "0 0 24 24"
-  }, React.createElement("path", {
-    d: "M3 9l1-5h16l1 5M4 9v11h16V9M9 20v-6h6v6"
-  }))), "Store Completion"), React.createElement("button", {
-    className: "btn btn-ghost btn-sm",
-    onClick: () => e("stores")
-  }, "See stores →")), 0 === i.length && React.createElement("div", {
+    stroke: col,
+    strokeWidth: "4",
+    strokeDasharray: dash + " 100",
+    strokeDashoffset: "25",
+    strokeLinecap: "round"
+  }), React.createElement("text", {
+    x: "18",
+    y: "20",
+    textAnchor: "middle",
+    fontSize: "9",
+    fontWeight: "800",
+    fill: "var(--text)"
+  }, pct + "%")), React.createElement("div", {
+    className: "store-stat"
+  }, st.noAccount ? React.createElement("span", {
+    className: "store-flag"
+  }, "No login yet") : React.createElement(React.Fragment, null, React.createElement("b", null, st.done + " / " + st.total), " tasks done", st.total === 0 ? React.createElement("div", {
     style: {
-      color: "var(--muted)",
-      fontSize: 13
-    }
-  }, "No data yet."), i.map(t => React.createElement("div", {
-    key: t.id,
-    style: {
-      marginBottom: 12
-    }
-  }, React.createElement("div", {
-    style: {
-      display: "flex",
-      justifyContent: "space-between",
-      marginBottom: 4
-    }
-  }, React.createElement("div", null, React.createElement("span", {
-    style: {
-      fontSize: 13,
-      fontWeight: 600
-    }
-  }, t.name), React.createElement("span", {
-    style: {
-      fontSize: 11,
-      color: "var(--muted)",
-      marginLeft: 8
-    }
-  }, t.territory), t.noAccount && React.createElement("span", {
-    onClick: () => e("accounts"),
-    style: {
-      fontSize: 10,
-      fontWeight: 700,
-      color: "var(--red)",
-      background: "rgba(224,82,82,.12)",
-      border: "1px solid rgba(224,82,82,.3)",
-      borderRadius: 6,
-      padding: "2px 7px",
-      marginLeft: 8,
-      cursor: "pointer",
-      whiteSpace: "nowrap"
-    }
-  }, "● APPROVE PENDING")), t.noAccount ? React.createElement("span", {
-    style: {
-      fontSize: 11,
       color: "var(--muted)"
     }
-  }, "no portal account") : React.createElement("span", {
-    style: {
-      fontSize: 12,
-      color: 100 === t.pct ? "var(--green)" : t.pct > 50 ? "var(--gold)" : "var(--muted)",
-      fontWeight: 600
-    }
-  }, t.done, "/", t.total, " · ", t.pct, "%")), React.createElement("div", {
-    className: "progress-bar"
-  }, React.createElement("div", {
-    className: "progress-fill",
-    style: {
-      width: `${t.noAccount?0:t.pct}%`,
-      background: 100 === t.pct ? "var(--green)" : "var(--orange)"
-    }
-  }))))), p && React.createElement("div", {
-    className: "modal-overlay",
-    onClick: e => e.target === e.currentTarget && u(null)
-  }, React.createElement("div", {
-    className: "modal modal-lg"
-  }, React.createElement("div", {
-    className: "modal-header"
-  }, React.createElement("div", {
-    className: "modal-title"
-  }, "stores" === p && `Open Stores (${v.length})`, "tasks" === p && `Open Tasks (${v.length})`, "pending" === p && `Pending Review (${v.length})`), React.createElement("button", {
-    className: "close-btn",
-    onClick: () => u(null)
-  }, "×")), React.createElement("div", {
-    className: "modal-body"
-  }, "stores" === p && React.createElement("div", null, 0 === v.length && React.createElement("div", {
-    style: {
-      color: "var(--muted)",
-      textAlign: "center",
-      padding: "30px 0"
-    }
-  }, "No open stores yet."), v.map(e => React.createElement("div", {
-    key: e.id,
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      padding: "12px 0",
-      borderBottom: "1px solid var(--border)"
-    }
-  }, React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 14,
-      fontWeight: 700
-    }
-  }, e.store_name || e.name), React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: "var(--muted)",
-      marginTop: 2
-    }
-  }, e.name, " · ", e.territory)), React.createElement("div", {
-    style: {
-      textAlign: "right"
-    }
-  }, e.email && React.createElement("a", {
-    href: `mailto:${e.email}`,
-    style: {
-      fontSize: 12,
-      color: "var(--blue)",
-      textDecoration: "none",
-      display: "block"
-    }
-  }, "✉ ", e.email), e.phone && React.createElement("a", {
-    href: `tel:${e.phone}`,
-    style: {
-      fontSize: 12,
-      color: "var(--green)",
-      textDecoration: "none",
-      marginTop: 2,
-      display: "block"
-    }
-  }, "📞 ", e.phone))))), "tasks" === p && React.createElement("div", null, 0 === v.length && React.createElement("div", {
-    style: {
-      color: "var(--muted)",
-      textAlign: "center",
-      padding: "30px 0"
-    }
-  }, "No active tasks."), v.map(e => {
-    const t = daysUntil(e.due_date),
-      a = l.find(t => t.id === e.id),
-      n = a && a.total > 0 && 100 === a.pct;
-    return React.createElement("div", {
-      key: e.id,
-      style: {
-        padding: "12px 0",
-        borderBottom: "1px solid var(--border)"
-      }
-    }, React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        marginBottom: 4
-      }
-    }, React.createElement("span", {
-      className: `cat-badge cat-${e.category}`
-    }, catLabel(e.category)), React.createElement("span", {
-      style: {
-        fontSize: 14,
-        fontWeight: 700,
-        flex: 1
-      }
-    }, e.title), n ? React.createElement("span", {
-      className: "badge badge-green"
-    }, "Complete") : null !== t && React.createElement("span", {
-      style: {
-        fontSize: 11,
-        color: t < 0 ? "var(--red)" : t <= 3 ? "var(--orange)" : "var(--muted)",
-        whiteSpace: "nowrap"
-      }
-    }, t < 0 ? `${Math.abs(t)}d late` : 0 === t ? "Due today" : `${t}d left`)), e.description && React.createElement("div", {
-      style: {
-        fontSize: 12,
-        color: "var(--muted)",
-        paddingLeft: 0
-      }
-    }, e.description), React.createElement("div", {
-      style: {
-        fontSize: 11,
-        color: "var(--muted)",
-        marginTop: 4
-      }
-    }, "Due: ", fmtDate(e.due_date) || "No date", " · Target: ", "all" === e.target ? "All stores" : e.target))
-  })), "pending" === p && React.createElement("div", null, 0 === v.length && React.createElement("div", {
-    style: {
-      color: "var(--muted)",
-      textAlign: "center",
-      padding: "30px 0"
-    }
-  }, "No pending reviews."), v.map(e => React.createElement("div", {
-    key: e.id,
-    style: {
-      display: "flex",
-      alignItems: "center",
-      gap: 12,
-      padding: "12px 0",
-      borderBottom: "1px solid var(--border)"
-    }
-  }, React.createElement("div", {
-    style: {
-      flex: 1
-    }
-  }, React.createElement("div", {
-    style: {
-      fontSize: 14,
-      fontWeight: 700
-    }
-  }, e.franchisees?.store_name || e.franchisees?.name), React.createElement("div", {
-    style: {
-      fontSize: 12,
-      color: "var(--muted)",
-      marginTop: 2
-    }
-  }, e.franchisees?.territory), React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 6,
-      marginTop: 4
-    }
-  }, React.createElement("span", {
-    className: `cat-badge cat-${e.ops_tasks?.category}`
-  }, catLabel(e.ops_tasks?.category)), React.createElement("span", {
-    style: {
-      fontSize: 12
-    }
-  }, e.ops_tasks?.title))), React.createElement("div", {
-    style: {
-      display: "flex",
-      gap: 8
-    }
-  }, React.createElement("button", {
-    className: "btn btn-danger btn-sm",
-    onClick: async () => {
-      const t = window.prompt("Rejection reason:");
-      null !== t && (await sb.from("ops_assignments").update({
-        status: "rejected",
-        hq_notes: t,
-        reviewed_at: (new Date).toISOString(),
-        reviewed_by: "HQ"
-      }).eq("id", e.id), refreshBadges(), dismissNotif("review-" + e.id), b(t => t.filter(t => t.id !== e.id)), o(e => ({
-        ...e,
-        pending: e.pending - 1
-      })))
-    }
-  }, "Reject"), React.createElement("button", {
-    className: "btn btn-green btn-sm",
-    onClick: async () => {
-      await sb.from("ops_assignments").update({
-        status: "approved",
-        reviewed_at: (new Date).toISOString(),
-        reviewed_by: "HQ"
-      }).eq("id", e.id), maybeCompleteTask(e.ops_task_id), refreshBadges(), dismissNotif("review-" + e.id), b(t => t.filter(t => t.id !== e.id)), o(e => ({
-        ...e,
-        pending: e.pending - 1
-      }))
-    }
-  }, "Approve ✓")))))), React.createElement("div", {
-    className: "modal-footer"
-  }, React.createElement("button", {
-    className: "btn btn-ghost",
-    onClick: () => u(null)
-  }, "Close")))))
+  }, "No tasks assigned") : null))));
+}))))
 }
 
 function TaskList({
