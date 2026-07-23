@@ -2585,7 +2585,7 @@ function MainApp({
       p = s.data || [],
       u = m.filter(e => {
         const t = p.filter(t => t.announcement_id === e.id);
-        return !t.length || t.some(e => !e.confirmed)
+        return t.length > 0 && t.some(e => !e.confirmed)
       }).length;
     w(u);
     const f = new Set((n.data || []).map(e => e.store).filter(Boolean)),
@@ -3386,13 +3386,25 @@ function AnnouncementsSummary({
   const openDetail = React.useCallback(async (ann) => {
     setDetailAnn(ann);
     setDetailStores(null);
-    try {
-      const { data } = await sb.from("ops_announcement_receipts").select("confirmed,confirmed_at,franchisee_id,franchisees(name,store_name,territory)").eq("announcement_id", ann.id);
-      const rows = (data || []).map(function (x) {
-        const fr = x.franchisees || {};
-        return { id: x.franchisee_id, name: fr.store_name || fr.name || "Store", loc: fr.territory || "", confirmed: !!x.confirmed, when: x.confirmed_at };
+    function shape(list, nameMap) {
+      return list.map(function (x) {
+        const fr = x.franchisees || (nameMap ? nameMap[x.franchisee_id] : null) || {};
+        return { id: x.franchisee_id, name: fr.store_name || fr.name || "Store", loc: fr.territory || "", confirmed: !!x.confirmed };
       }).sort(function (a2, b2) { return (a2.confirmed === b2.confirmed) ? String(a2.name).localeCompare(String(b2.name)) : (a2.confirmed ? 1 : -1); });
-      setDetailStores(rows);
+    }
+    try {
+      const j = await sb.from("ops_announcement_receipts").select("confirmed,franchisee_id,franchisees(name,store_name,territory)").eq("announcement_id", ann.id);
+      if (!j.error && j.data) { setDetailStores(shape(j.data)); return; }
+    } catch (e) {}
+    try {
+      const b2 = await sb.from("ops_announcement_receipts").select("confirmed,franchisee_id").eq("announcement_id", ann.id);
+      const list = b2.data || [];
+      const map = {};
+      try {
+        const fr = await sb.from("franchisees").select("id,name,store_name,territory");
+        (fr.data || []).forEach(function (f2) { map[f2.id] = f2; });
+      } catch (e) {}
+      setDetailStores(shape(list, map));
     } catch (e) { setDetailStores([]); }
   }, []);
   const v = [{
@@ -3497,13 +3509,15 @@ function AnnouncementsSummary({
       c = l.total ? Math.round(l.confirmed / l.total * 100) : 0;
     return React.createElement("div", {
       key: t.id,
+      onClick: () => openDetail(t),
       style: {
         background: "var(--panel)",
         border: "1px solid var(--border)",
         boxShadow: `inset 3px 0 0 ${r}`,
         borderRadius: 10,
         padding: 14,
-        marginBottom: 10
+        marginBottom: 10,
+        cursor: "pointer"
       }
     }, React.createElement("div", {
       style: {
@@ -3567,19 +3581,6 @@ function AnnouncementsSummary({
       month: "short",
       day: "numeric"
     })), React.createElement("button", {
-      "aria-label": "View announcement details",
-      onClick: n => { n.stopPropagation(); openDetail(t); },
-      style: {
-        background: "none",
-        border: "1px solid var(--border)",
-        borderRadius: 7,
-        padding: "3px 9px",
-        fontSize: 11,
-        fontWeight: 700,
-        color: "var(--text)",
-        cursor: "pointer"
-      }
-    }, "Details"), React.createElement("button", {
       "aria-label": "Delete announcement",
       onClick: n => {
         n.stopPropagation(), async function(t) {
@@ -3627,19 +3628,15 @@ function AnnouncementsSummary({
     }), React.createElement("path", {
       d: "M10 11v6M14 11v6"
     }))))), React.createElement("div", {
-      onClick: () => i(s === t.id ? null : t.id),
       style: {
         fontSize: 12,
         color: "var(--muted)",
         lineHeight: 1.55,
-        cursor: "pointer",
-        ...s === t.id ? {} : {
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap"
-        }
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap"
       }
-    }, t.body, s !== t.id && t.body.length > 90 ? " " : ""), (t.attachment_url || t.link_url) && React.createElement("div", {
+    }, t.body), (t.attachment_url || t.link_url) && React.createElement("div", {
       style: {
         marginTop: 8,
         display: "flex",
@@ -3649,6 +3646,7 @@ function AnnouncementsSummary({
       href: t.attachment_url,
       target: "_blank",
       rel: "noreferrer",
+      onClick: e => e.stopPropagation(),
       style: {
         fontSize: 11,
         color: "var(--gold)",
@@ -3658,6 +3656,7 @@ function AnnouncementsSummary({
       href: t.link_url,
       target: "_blank",
       rel: "noreferrer",
+      onClick: e => e.stopPropagation(),
       style: {
         fontSize: 11,
         color: "var(--purple)",
@@ -3665,58 +3664,27 @@ function AnnouncementsSummary({
       }
     }, "🔗 ", t.link_label || "Link")))
   })), detailAnn && React.createElement("div", {
-  onClick: () => {
-    setDetailAnn(null);
-    setDetailStores(null);
-  },
-  style: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,.45)",
-    zIndex: 1500,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16
+  className: "modal-overlay",
+  onClick: e => {
+    if (e.target === e.currentTarget) {
+      setDetailAnn(null);
+      setDetailStores(null);
+    }
   }
 }, React.createElement("div", {
-  onClick: e => e.stopPropagation(),
+  className: "modal",
   style: {
-    background: "var(--panel)",
-    border: "1px solid var(--border)",
-    borderRadius: 16,
-    maxWidth: 460,
-    width: "100%",
-    maxHeight: "82vh",
-    overflowY: "auto",
-    boxShadow: "0 20px 60px rgba(0,0,0,.4)"
+    maxWidth: 480
   }
 }, React.createElement("div", {
-  style: {
-    padding: "18px 20px 14px",
-    borderBottom: "1px solid var(--border)",
-    position: "sticky",
-    top: 0,
-    background: "var(--panel)"
-  }
-}, React.createElement("div", {
-  style: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12
-  }
+  className: "modal-header"
 }, React.createElement("div", null, React.createElement("div", {
-  style: {
-    fontSize: 17,
-    fontWeight: 800,
-    lineHeight: 1.25
-  }
+  className: "modal-title"
 }, detailAnn.title), React.createElement("div", {
   style: {
     fontSize: 11,
     color: "var(--muted)",
-    marginTop: 4
+    marginTop: 3
   }
 }, new Date(detailAnn.created_at).toLocaleDateString("en-US", {
   timeZone: EST_TZ,
@@ -3731,22 +3699,22 @@ function AnnouncementsSummary({
   style: {
     background: "none",
     border: "none",
-    fontSize: 22,
+    fontSize: 24,
     lineHeight: 1,
     color: "var(--muted)",
     cursor: "pointer",
     padding: 0
   }
-}, "\u00D7"))), React.createElement("div", {
+}, "\u00D7")), React.createElement("div", {
   style: {
-    padding: "16px 20px"
+    padding: "16px 20px 20px"
   }
 }, detailAnn.body ? React.createElement("div", {
   style: {
     fontSize: 13,
     color: "var(--text)",
-    lineHeight: 1.55,
-    marginBottom: 18,
+    lineHeight: 1.6,
+    marginBottom: 20,
     whiteSpace: "pre-wrap"
   }
 }, detailAnn.body) : null, React.createElement("div", {
@@ -3762,18 +3730,18 @@ function AnnouncementsSummary({
   style: {
     fontSize: 12,
     color: "var(--muted)",
-    padding: "12px 0"
+    padding: "10px 0"
   }
-}, "Loading recipients\u2026") : 0 === detailStores.length ? React.createElement("div", {
+}, "Loading\u2026") : 0 === detailStores.length ? React.createElement("div", {
   style: {
     fontSize: 12,
     color: "var(--muted)",
-    padding: "12px 0"
+    padding: "10px 0"
   }
-}, "No stores were assigned to this announcement.") : React.createElement(React.Fragment, null, React.createElement("div", {
+}, "No stores received this announcement yet.") : React.createElement(React.Fragment, null, React.createElement("div", {
   style: {
     display: "flex",
-    gap: 8,
+    gap: 7,
     marginBottom: 12,
     fontSize: 11,
     fontWeight: 700
@@ -3804,7 +3772,7 @@ function AnnouncementsSummary({
       alignItems: "center",
       justifyContent: "space-between",
       gap: 10,
-      padding: "9px 12px",
+      padding: "10px 12px",
       background: "var(--panel2)",
       border: "1px solid var(--border)",
       borderRadius: 9
@@ -3816,10 +3784,7 @@ function AnnouncementsSummary({
   }, React.createElement("div", {
     style: {
       fontSize: 13,
-      fontWeight: 700,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap"
+      fontWeight: 700
     }
   }, st.name), st.loc ? React.createElement("div", {
     style: {
@@ -8173,7 +8138,7 @@ function AccountManager({
       }
     }, "—");
     const n = String(e),
-      _maxNameLen = (typeof window !== "undefined" && window.innerWidth > 768) ? 28 : 12,
+      _maxNameLen = (typeof window !== "undefined" && window.innerWidth > 768) ? 60 : 12,
       r = {
         fontWeight: t ? 600 : void 0,
         fontSize: a ? 12 : void 0,
