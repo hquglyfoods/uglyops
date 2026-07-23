@@ -488,7 +488,7 @@ body.modal-open{overflow:hidden;}
 .store-card.a{border-left-color:var(--gold);}
 .store-card.r{border-left-color:var(--red);}
 .store-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
-.store-nm{font-size:15px;font-weight:800;}
+.store-nm{font-size:15px;font-weight:800;line-height:1.2;min-height:36px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .store-lc{font-size:11px;color:var(--muted);}
 .store-light{width:11px;height:11px;border-radius:50%;margin-top:4px;background:var(--muted);}
 .store-card.g .store-light{background:var(--green);}
@@ -501,6 +501,36 @@ body.modal-open{overflow:hidden;}
 .store-flag{color:var(--red);font-weight:700;}
 .dash-empty{color:var(--muted);font-size:13px;padding:20px 2px;}
 @media(max-width:760px){.act-grid{grid-template-columns:1fr;}.store-grid{grid-template-columns:1fr;}}
+/* === Franchisee Home === */
+.fr-home{padding:16px 16px 40px;max-width:640px;margin:0 auto;}
+.fr-hello .fr-store{font-size:22px;font-weight:800;letter-spacing:-.01em;}
+.fr-hello .fr-date{font-size:12px;color:var(--muted);margin-top:2px;}
+.fr-lbl{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:20px 2px 9px;}
+.fr-acts{display:flex;flex-direction:column;gap:10px;}
+.fr-act{display:flex;align-items:center;gap:13px;background:var(--panel);border:1px solid var(--border);border-left:5px solid var(--muted);border-radius:14px;padding:15px;}
+.fr-act.red{border-left-color:var(--red);background:rgba(190,74,62,.055);}
+.fr-act.amber{border-left-color:var(--gold);background:rgba(184,134,11,.06);}
+.fr-act.green{border-left-color:var(--green);background:rgba(46,125,79,.05);}
+.fr-n{font-size:34px;font-weight:800;line-height:1;min-width:40px;text-align:center;}
+.fr-act.red .fr-n{color:var(--red);}
+.fr-act.amber .fr-n{color:var(--gold);}
+.fr-act.green .fr-n{color:var(--green);font-size:26px;}
+.fr-tx{flex:1;min-width:0;}
+.fr-t{font-size:15px;font-weight:800;}
+.fr-s{font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fr-go{font-size:19px;color:var(--muted);flex-shrink:0;}
+.fr-two{display:flex;gap:10px;}
+.fr-box{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:15px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.fr-ring{width:84px;height:84px;margin-bottom:8px;}
+.fr-cap{font-size:11.5px;color:var(--muted);line-height:1.45;}
+.fr-cap b{color:var(--text);}
+.fr-badge-ok{display:inline-flex;align-items:center;gap:6px;background:rgba(46,125,79,.12);color:var(--green);font-size:13px;font-weight:800;padding:9px 14px;border-radius:999px;margin-bottom:9px;}
+.fr-stand-n{font-size:30px;font-weight:800;color:var(--red);line-height:1;margin-bottom:6px;}
+.fr-link{margin-top:8px;font-size:12px;font-weight:700;color:var(--gold);cursor:pointer;}
+.fr-quick{display:flex;gap:10px;}
+.fr-qbtn{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer;}
+.fr-qi{font-size:21px;margin-bottom:5px;}
+.fr-qt{font-size:12.5px;font-weight:700;}
 </style>
 </head>
 <body>
@@ -10342,11 +10372,262 @@ function FranchiseeTutorial({
   return React.createElement(React.Fragment, null, spot, coach, skip);
 }
 
+function FranchiseeHome({
+  profile,
+  storeName,
+  openTasks,
+  announcements,
+  unreadMsgs,
+  warns12,
+  totalWarns,
+  go
+}) {
+  const [d, setD] = React.useState(null);
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const fid = await resolveFranchiseeId(profile);
+        if (!fid) {
+          if (alive) setD({
+            dueToday: 0,
+            overdue: 0,
+            tLate: [],
+            tToday: [],
+            tRest: [],
+            done: 0,
+            total: 0,
+            pct: 0
+          });
+          return;
+        }
+        const {
+          data
+        } = await sb.from("ops_assignments").select("status,ops_tasks(title,status,due_date)").eq("franchisee_id", fid);
+        const rows = (data || []).filter(r => r.ops_tasks && "archived" !== r.ops_tasks.status);
+        const open = rows.filter(r => "pending" === r.status || "in_progress" === r.status || "rejected" === r.status);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let dueToday = 0,
+          overdue = 0;
+        const tLate = [],
+          tToday = [],
+          tRest = [];
+        open.forEach(function (r) {
+          const raw = r.ops_tasks.due_date;
+          let bucket = tRest;
+          if (raw) {
+            const dt = new Date(String(raw).length <= 10 ? raw + "T00:00:00" : raw);
+            dt.setHours(0, 0, 0, 0);
+            const diff = Math.round((dt - today) / 864e5);
+            if (diff < 0) {
+              overdue++;
+              bucket = tLate;
+            } else if (0 === diff) {
+              dueToday++;
+              bucket = tToday;
+            }
+          }
+          if (r.ops_tasks.title) bucket.push(r.ops_tasks.title);
+        });
+        const total = rows.length,
+          done = rows.filter(r => "approved" === r.status).length;
+        if (alive) setD({
+          dueToday: dueToday,
+          overdue: overdue,
+          tLate: tLate,
+          tToday: tToday,
+          tRest: tRest,
+          done: done,
+          total: total,
+          pct: total ? Math.round(done / total * 100) : 0
+        });
+      } catch (e) {
+        if (alive) setD({
+          dueToday: 0,
+          overdue: 0,
+          tLate: [],
+          tToday: [],
+          tRest: [],
+          done: 0,
+          total: 0,
+          pct: 0
+        });
+      }
+    })();
+    return function () {
+      alive = false;
+    };
+  }, [profile]);
+  const dt = new Date();
+  const dateStr = dt.toLocaleDateString("en-US", {
+    timeZone: EST_TZ,
+    weekday: "long",
+    month: "long",
+    day: "numeric"
+  });
+  const cards = [];
+  const overdue = d ? d.overdue : 0,
+    dueToday = d ? d.dueToday : 0;
+  if (overdue > 0) cards.push({
+    tone: "red",
+    n: overdue,
+    t: 1 === overdue ? "Task past due" : "Tasks past due",
+    s: d && d.tLate.slice(0, 2).join(", ") || "Please finish these first.",
+    go: () => go("tasks", "tasks")
+  });
+  if (dueToday > 0) cards.push({
+    tone: "red",
+    n: dueToday,
+    t: 1 === dueToday ? "Task due today" : "Tasks due today",
+    s: d && d.tToday.slice(0, 2).join(", ") || "Tap to open",
+    go: () => go("tasks", "tasks")
+  });
+  const restTasks = Math.max(0, (openTasks || 0) - overdue - dueToday);
+  if (restTasks > 0) cards.push({
+    tone: "amber",
+    n: restTasks,
+    t: 1 === restTasks ? "Task to finish" : "Tasks to finish",
+    s: d && d.tRest.slice(0, 2).join(", ") || "Tap to open",
+    go: () => go("tasks", "tasks")
+  });
+  if (announcements > 0) cards.push({
+    tone: "amber",
+    n: announcements,
+    t: 1 === announcements ? "Announcement to confirm" : "Announcements to confirm",
+    s: "Tap to read and confirm.",
+    go: () => go("tasks", "announce")
+  });
+  if (unreadMsgs > 0) cards.push({
+    tone: "amber",
+    n: unreadMsgs,
+    t: 1 === unreadMsgs ? "New message from HQ" : "New messages from HQ",
+    s: "Tap to reply.",
+    go: () => go("contact")
+  });else cards.push({
+    tone: "green",
+    n: "\u2713",
+    t: "No new messages",
+    s: "HQ has not written since you last checked.",
+    go: null
+  });
+  if (0 === cards.filter(c => "green" !== c.tone).length) {
+    cards.length = 0;
+    cards.push({
+      tone: "green",
+      n: "\u2713",
+      t: "You're all caught up",
+      s: "No tasks or announcements need you right now.",
+      go: null
+    });
+  }
+  const pct = d ? d.pct : 0;
+  const ringColor = pct >= 85 ? "var(--green)" : pct >= 60 ? "var(--gold)" : "var(--red)";
+  return React.createElement("div", {
+    className: "fr-home"
+  }, React.createElement("div", {
+    className: "fr-hello"
+  }, React.createElement("div", {
+    className: "fr-store"
+  }, storeName || "My Store"), React.createElement("div", {
+    className: "fr-date"
+  }, dateStr)), React.createElement("div", {
+    className: "fr-lbl"
+  }, "What needs you today"), React.createElement("div", {
+    className: "fr-acts"
+  }, cards.map(function (c, k) {
+    return React.createElement("div", {
+      key: k,
+      className: "fr-act " + c.tone,
+      onClick: c.go || null,
+      style: {
+        cursor: c.go ? "pointer" : "default"
+      }
+    }, React.createElement("div", {
+      className: "fr-n"
+    }, c.n), React.createElement("div", {
+      className: "fr-tx"
+    }, React.createElement("div", {
+      className: "fr-t"
+    }, c.t), React.createElement("div", {
+      className: "fr-s"
+    }, c.s)), c.go ? React.createElement("div", {
+      className: "fr-go"
+    }, "\u2192") : null);
+  })), React.createElement("div", {
+    className: "fr-lbl"
+  }, "Your progress"), React.createElement("div", {
+    className: "fr-two"
+  }, React.createElement("div", {
+    className: "fr-box"
+  }, React.createElement("svg", {
+    className: "fr-ring",
+    viewBox: "0 0 36 36"
+  }, React.createElement("circle", {
+    cx: "18",
+    cy: "18",
+    r: "15.9",
+    fill: "none",
+    stroke: "var(--panel2)",
+    strokeWidth: "4"
+  }), React.createElement("circle", {
+    cx: "18",
+    cy: "18",
+    r: "15.9",
+    fill: "none",
+    stroke: ringColor,
+    strokeWidth: "4",
+    strokeDasharray: Math.max(0, Math.min(100, pct)) + " 100",
+    strokeDashoffset: "25",
+    strokeLinecap: "round"
+  }), React.createElement("text", {
+    x: "18",
+    y: "20.5",
+    textAnchor: "middle",
+    fontSize: "8.5",
+    fontWeight: "800",
+    fill: "var(--text)"
+  }, pct + "%")), React.createElement("div", {
+    className: "fr-cap"
+  }, d ? React.createElement(React.Fragment, null, React.createElement("b", null, d.done + " of " + d.total), " tasks approved") : "Loading\u2026")), React.createElement("div", {
+    className: "fr-box"
+  }, 0 === (warns12 || 0) ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "fr-badge-ok"
+  }, "\u2713 Good standing"), React.createElement("div", {
+    className: "fr-cap"
+  }, "No warnings in the last 12 months")) : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "fr-stand-n"
+  }, warns12), React.createElement("div", {
+    className: "fr-cap"
+  }, 1 === warns12 ? "warning in the last 12 months" : "warnings in the last 12 months"), totalWarns > 0 ? React.createElement("div", {
+    className: "fr-link",
+    onClick: () => go("warnings")
+  }, "View") : null))), React.createElement("div", {
+    className: "fr-lbl"
+  }, "Quick"), React.createElement("div", {
+    className: "fr-quick"
+  }, React.createElement("div", {
+    className: "fr-qbtn",
+    onClick: () => go("contact")
+  }, React.createElement("div", {
+    className: "fr-qi"
+  }, "\u2709"), React.createElement("div", {
+    className: "fr-qt"
+  }, "Message HQ")), React.createElement("div", {
+    className: "fr-qbtn",
+    onClick: () => go("bot")
+  }, React.createElement("div", {
+    className: "fr-qi"
+  }, "\u25C9"), React.createElement("div", {
+    className: "fr-qt"
+  }, "Ask UglyBot"))));
+}
+
 function FranchiseePortal({
   session: e,
   profile: t
 }) {
-  const [a, n] = useState(() => "#install" === window.location.hash ? "password" : "tasks"), [r, o] = useState(!1), [l, s] = useState(0), [i, c] = useState(0), [d, m] = useState(0), [p, u] = useState(0), [g, f] = useState(0), [v, b] = useState(0), [h, y] = useState("tasks"), [showTut, setShowTut] = useState(() => {
+  const [a, n] = useState(() => "#install" === window.location.hash ? "password" : "home"), [r, o] = useState(!1), [l, s] = useState(0), [i, c] = useState(0), [d, m] = useState(0), [p, u] = useState(0), [g, f] = useState(0), [v, b] = useState(0), [h, y] = useState("tasks"), [showTut, setShowTut] = useState(() => {
     try { return "1" !== localStorage.getItem("ugly_fr_tutorial_done"); } catch (e) { return !1; }
   }), R = t?.store || t?.full_name || t?.name || "My Store";
   React.useEffect(() => {
@@ -10399,6 +10680,10 @@ function FranchiseePortal({
     "warnings" === a && 0 === p && n("tasks")
   }, [a, p]);
   const S = [{
+    key: "home",
+    icon: "⌂",
+    label: "Home"
+  }, {
     key: "tasks",
     icon: "▤",
     label: "Tasks & Announcements",
@@ -10554,7 +10839,16 @@ function FranchiseePortal({
       padding: "2px 6px",
       fontFamily: "inherit"
     }
-  }, "×")), "tasks" === a && React.createElement(FranchiseeTasks, {
+  }, "×")), "home" === a && React.createElement(FranchiseeHome, {
+    profile: t,
+    storeName: R,
+    openTasks: i,
+    announcements: d,
+    unreadMsgs: l,
+    warns12: v,
+    totalWarns: p,
+    go: (view, sub) => { if (sub) y(sub); n(view); window.scrollTo(0, 0); }
+  }), "tasks" === a && React.createElement(FranchiseeTasks, {
     profile: t,
     onUpdate: x,
     initialSub: h
@@ -10680,6 +10974,14 @@ function FranchiseePortal({
   }))), React.createElement("nav", {
     className: "tabbar"
   }, [{
+    v: "home",
+    label: "Home",
+    icon: React.createElement(React.Fragment, null, React.createElement("path", {
+      d: "M3 10.5L12 3l9 7.5"
+    }), React.createElement("path", {
+      d: "M5.5 9.5V21h13V9.5"
+    }))
+  }, {
     v: "tasks",
     label: "Tasks·Anmt",
     badge: (i || 0) + (d || 0) || null,
