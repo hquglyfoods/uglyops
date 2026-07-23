@@ -3275,7 +3275,7 @@ function TaskList({
           c: 0,
           t: 0
         };
-        return !(t.t > 0 && t.c === t.t)
+        return t.t > 0 && t.c < t.t
       }).length;
       b(e => null === e ? o : e)
     })()
@@ -3369,7 +3369,7 @@ function TaskList({
 function AnnouncementsSummary({
   onCount: e
 }) {
-  const [t, a] = useState([]), [n, r] = useState({}), [o, l] = useState(!0), [s, i] = useState(null), [c, d] = useState("all"), [m, p] = useState("all"), [u, g] = useState("all"), f = React.useCallback(async () => {
+  const [t, a] = useState([]), [n, r] = useState({}), [o, l] = useState(!0), [s, i] = useState(null), [c, d] = useState("all"), [m, p] = useState("all"), [u, g] = useState("all"), [detailAnn, setDetailAnn] = useState(null), [detailStores, setDetailStores] = useState(null), f = React.useCallback(async () => {
     const [e, t] = await Promise.all([sb.from("ops_announcements").select("*").order("created_at", {
       ascending: !1
     }).limit(60), sb.from("ops_announcement_receipts").select("announcement_id,confirmed")]), n = t.data || [], o = {};
@@ -3383,6 +3383,18 @@ function AnnouncementsSummary({
   useEffect(() => {
     f()
   }, [f]);
+  const openDetail = React.useCallback(async (ann) => {
+    setDetailAnn(ann);
+    setDetailStores(null);
+    try {
+      const { data } = await sb.from("ops_announcement_receipts").select("confirmed,confirmed_at,franchisee_id,franchisees(name,store_name,territory)").eq("announcement_id", ann.id);
+      const rows = (data || []).map(function (x) {
+        const fr = x.franchisees || {};
+        return { id: x.franchisee_id, name: fr.store_name || fr.name || "Store", loc: fr.territory || "", confirmed: !!x.confirmed, when: x.confirmed_at };
+      }).sort(function (a2, b2) { return (a2.confirmed === b2.confirmed) ? String(a2.name).localeCompare(String(b2.name)) : (a2.confirmed ? 1 : -1); });
+      setDetailStores(rows);
+    } catch (e) { setDetailStores([]); }
+  }, []);
   const v = [{
       key: "general",
       label: "General",
@@ -3424,10 +3436,10 @@ function AnnouncementsSummary({
         confirmed: 0,
         total: 0
       };
-      return !(t.total > 0 && t.confirmed === t.total)
+      return t.total > 0 && t.confirmed < t.total
     }).length;
     e(a)
-  }, [o, t, n]), React.createElement("div", null, React.createElement("div", {
+  }, [o, t, n]), React.createElement(React.Fragment, null, React.createElement("div", null, React.createElement("div", {
     className: "filter-bar"
   }, React.createElement("select", {
     value: c,
@@ -3555,6 +3567,19 @@ function AnnouncementsSummary({
       month: "short",
       day: "numeric"
     })), React.createElement("button", {
+      "aria-label": "View announcement details",
+      onClick: n => { n.stopPropagation(); openDetail(t); },
+      style: {
+        background: "none",
+        border: "1px solid var(--border)",
+        borderRadius: 7,
+        padding: "3px 9px",
+        fontSize: 11,
+        fontWeight: 700,
+        color: "var(--text)",
+        cursor: "pointer"
+      }
+    }, "Details"), React.createElement("button", {
       "aria-label": "Delete announcement",
       onClick: n => {
         n.stopPropagation(), async function(t) {
@@ -3639,7 +3664,184 @@ function AnnouncementsSummary({
         textDecoration: "none"
       }
     }, "🔗 ", t.link_label || "Link")))
-  }))
+  })), detailAnn && React.createElement("div", {
+  onClick: () => {
+    setDetailAnn(null);
+    setDetailStores(null);
+  },
+  style: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,.45)",
+    zIndex: 1500,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16
+  }
+}, React.createElement("div", {
+  onClick: e => e.stopPropagation(),
+  style: {
+    background: "var(--panel)",
+    border: "1px solid var(--border)",
+    borderRadius: 16,
+    maxWidth: 460,
+    width: "100%",
+    maxHeight: "82vh",
+    overflowY: "auto",
+    boxShadow: "0 20px 60px rgba(0,0,0,.4)"
+  }
+}, React.createElement("div", {
+  style: {
+    padding: "18px 20px 14px",
+    borderBottom: "1px solid var(--border)",
+    position: "sticky",
+    top: 0,
+    background: "var(--panel)"
+  }
+}, React.createElement("div", {
+  style: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12
+  }
+}, React.createElement("div", null, React.createElement("div", {
+  style: {
+    fontSize: 17,
+    fontWeight: 800,
+    lineHeight: 1.25
+  }
+}, detailAnn.title), React.createElement("div", {
+  style: {
+    fontSize: 11,
+    color: "var(--muted)",
+    marginTop: 4
+  }
+}, new Date(detailAnn.created_at).toLocaleDateString("en-US", {
+  timeZone: EST_TZ,
+  month: "short",
+  day: "numeric",
+  year: "numeric"
+}))), React.createElement("button", {
+  onClick: () => {
+    setDetailAnn(null);
+    setDetailStores(null);
+  },
+  style: {
+    background: "none",
+    border: "none",
+    fontSize: 22,
+    lineHeight: 1,
+    color: "var(--muted)",
+    cursor: "pointer",
+    padding: 0
+  }
+}, "\u00D7"))), React.createElement("div", {
+  style: {
+    padding: "16px 20px"
+  }
+}, detailAnn.body ? React.createElement("div", {
+  style: {
+    fontSize: 13,
+    color: "var(--text)",
+    lineHeight: 1.55,
+    marginBottom: 18,
+    whiteSpace: "pre-wrap"
+  }
+}, detailAnn.body) : null, React.createElement("div", {
+  style: {
+    fontSize: 11,
+    fontWeight: 800,
+    textTransform: "uppercase",
+    letterSpacing: ".08em",
+    color: "var(--muted)",
+    marginBottom: 10
+  }
+}, "Sent to"), null === detailStores ? React.createElement("div", {
+  style: {
+    fontSize: 12,
+    color: "var(--muted)",
+    padding: "12px 0"
+  }
+}, "Loading recipients\u2026") : 0 === detailStores.length ? React.createElement("div", {
+  style: {
+    fontSize: 12,
+    color: "var(--muted)",
+    padding: "12px 0"
+  }
+}, "No stores were assigned to this announcement.") : React.createElement(React.Fragment, null, React.createElement("div", {
+  style: {
+    display: "flex",
+    gap: 8,
+    marginBottom: 12,
+    fontSize: 11,
+    fontWeight: 700
+  }
+}, React.createElement("span", {
+  style: {
+    color: "var(--green)"
+  }
+}, detailStores.filter(x => x.confirmed).length, " confirmed"), React.createElement("span", {
+  style: {
+    color: "var(--muted)"
+  }
+}, "\u00B7"), React.createElement("span", {
+  style: {
+    color: "var(--gold)"
+  }
+}, detailStores.filter(x => !x.confirmed).length, " pending")), React.createElement("div", {
+  style: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 7
+  }
+}, detailStores.map(function (st, k) {
+  return React.createElement("div", {
+    key: k,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+      padding: "9px 12px",
+      background: "var(--panel2)",
+      border: "1px solid var(--border)",
+      borderRadius: 9
+    }
+  }, React.createElement("div", {
+    style: {
+      minWidth: 0
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 700,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, st.name), st.loc ? React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: "var(--muted)"
+    }
+  }, st.loc) : null), st.confirmed ? React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontWeight: 800,
+      color: "var(--green)",
+      flexShrink: 0
+    }
+  }, "\u2713 Confirmed") : React.createElement("span", {
+    style: {
+      fontSize: 11,
+      fontWeight: 700,
+      color: "var(--gold)",
+      flexShrink: 0
+    }
+  }, "Pending"));
+})))))))
 }
 
 function TaskCard({
@@ -7971,12 +8173,13 @@ function AccountManager({
       }
     }, "—");
     const n = String(e),
+      _maxNameLen = (typeof window !== "undefined" && window.innerWidth > 768) ? 28 : 12,
       r = {
         fontWeight: t ? 600 : void 0,
         fontSize: a ? 12 : void 0,
         color: a ? "var(--muted)" : void 0
       };
-    return n.length <= 12 ? React.createElement("span", {
+    return n.length <= _maxNameLen ? React.createElement("span", {
       style: r
     }, n) : React.createElement("span", {
       onClick: e => {
